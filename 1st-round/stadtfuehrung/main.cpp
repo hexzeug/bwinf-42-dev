@@ -1,45 +1,94 @@
 #include <bits/stdc++.h>
 
-#define point tuple<int, int, bool>
-#define edge tuple<int, int, int>
+#define tiii tuple<int, int, int>
 
 using namespace std;
 
-int main() {
-    int N;
-    cin >> N;
-    vector<point> origTour(N);
-    vector<string> nameList;
-    vector<list<edge>> adj;
-    adj.reserve(N);
+struct point {
+    string name;
+    int year;
+    bool essential;
+    int weightToPrev;
+    int skipTo = -1;
+};
 
+int main() {
+    vector<point> origTour;
+    queue<int> essPath;
+    
     {
-        unordered_map<string, int> nameMap(N);
-        nameMap.reserve(N);
-        int old_pos = 0;
-        int u = -1;
-        
+        int N;
+        cin >> N;
+
+        unordered_map<string, int> nameMap;
+        origTour.resize(N);
+
+        int oldPos = 0;
         for (int i = 0; i < N; i++) {
-            string name, year, essen, pos;
+            string name, yearStr, essStr, posStr;
             getline(cin, name, ',');
-            getline(cin, year, ',');
-            getline(cin, essen, ',');
-            getline(cin, pos);
-            if (nameMap.count(name) == 0) {
-                nameMap[name] = nameList.size();
-                nameList.push_back(name);
-                adj.push_back({});
+            getline(cin, yearStr, ',');
+            getline(cin, essStr, ',');
+            getline(cin, posStr);
+            bool ess = essStr == "X";
+            int pos = stoi(posStr);
+
+            origTour[i] = {name, stoi(yearStr), ess, pos - oldPos};
+            if (ess) essPath.push(i);
+
+            if (nameMap.count(name) > 0) {
+                origTour[nameMap[name]].skipTo = i;
             }
-            int v = nameMap[name], y = stoi(year), p = stoi(pos);
-            bool e = essen == "X";
-            int w = p - old_pos;
-            old_pos = p;
-            origTour[i] = {v, y, e};
-            if (u >= 0) {
-                adj[u].push_back({v, y, w});
-            }
-            u = v;
+            nameMap[name] = i;
+
+            oldPos = pos;
         }
+        origTour[N - 1].skipTo = 0;
+    }
+
+    essPath.push(essPath.front());
+    int entry = essPath.front();
+
+    vector<int> preds(origTour.size(), -1);
+    {
+        priority_queue<tiii, vector<tiii>, greater<tiii>> pq;
+        pq.push({0, -1, essPath.front()});
+        essPath.pop();
+        while(!pq.empty()) {
+            auto [d, p, v] = pq.top();
+            pq.pop();
+
+            if (preds[v] >= 0) continue;
+            preds[v] = p;
+            
+            if (v == essPath.front()) {
+                essPath.pop();
+                pq = priority_queue<tiii, vector<tiii>, greater<tiii>>();
+            }
+            
+            if (v + 1 < origTour.size())
+                pq.push({d + origTour[v + 1].weightToPrev, v, v + 1});
+            if (origTour[v].skipTo >= 0 && origTour[v].skipTo <= essPath.front())
+                pq.push({d, v, origTour[v].skipTo});
+        }
+    }
+
+    while (origTour[entry].year < origTour[preds[entry]].year)
+        entry = preds[entry];
+
+    vector<int> newTour;
+    {
+        int v = entry;
+        do {
+            v = preds[v];
+            newTour.push_back(v);
+        } while (v != entry);
+        reverse(newTour.begin(), newTour.end());
+    }
+
+    for (int v : newTour) {
+        point p = origTour[v];
+        cout << p.name << "," << p.year << "," << (p.essential ? "X," : " ,") << 1 << endl;
     }
 
     return 0;
