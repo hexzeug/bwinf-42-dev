@@ -14,13 +14,14 @@ struct point {
 
 int main() {
     vector<point> origTour;
-    queue<int> essPath;
+    list<int> essPath;
     
     {
         int N;
         cin >> N;
 
         unordered_map<string, int> nameMap;
+        unordered_map<string, int> nameMapBeforeEntry;
         origTour.resize(N);
 
         int oldPos = 0;
@@ -34,26 +35,33 @@ int main() {
             int pos = stoi(posStr);
 
             origTour[i] = {name, stoi(yearStr), ess, pos - oldPos};
-            if (ess) essPath.push(i);
 
-            if (nameMap.count(name) > 0) {
+            if (nameMap.count(name) > 0 && nameMap[name] >= essPath.back()) {
                 origTour[nameMap[name]].skipTo = i;
             }
             nameMap[name] = i;
+            if (essPath.empty())
+                nameMapBeforeEntry[name] = i;
+
+            if (ess) essPath.push_back(i);
 
             oldPos = pos;
         }
-        origTour[N - 1].skipTo = 0;
+
+        for (int i = essPath.back(); i < N; i++)
+            if (nameMapBeforeEntry.count(origTour[i].name) > 0)
+                origTour[i].skipTo = nameMapBeforeEntry[origTour[i].name];
     }
 
-    essPath.push(essPath.front());
     int entry = essPath.front();
 
     vector<int> preds(origTour.size(), -1);
     {
+        essPath.push_back(entry);
+
         priority_queue<tiii, vector<tiii>, greater<tiii>> pq;
-        pq.push({0, -1, essPath.front()});
-        essPath.pop();
+        pq.push({0, -1, entry});
+
         while(!pq.empty()) {
             auto [d, p, v] = pq.top();
             pq.pop();
@@ -62,18 +70,19 @@ int main() {
             preds[v] = p;
             
             if (v == essPath.front()) {
-                essPath.pop();
+                essPath.pop_front();
+                if (essPath.empty()) break;
                 pq = priority_queue<tiii, vector<tiii>, greater<tiii>>();
             }
             
             if (v + 1 < origTour.size())
                 pq.push({d + origTour[v + 1].weightToPrev, v, v + 1});
-            if (origTour[v].skipTo >= 0 && origTour[v].skipTo <= essPath.front())
+            if (origTour[v].skipTo >= 0)
                 pq.push({d, v, origTour[v].skipTo});
         }
     }
 
-    while (origTour[entry].year < origTour[preds[entry]].year)
+    while (preds[entry] < entry)
         entry = preds[entry];
 
     vector<int> newTour;
@@ -86,9 +95,15 @@ int main() {
         reverse(newTour.begin(), newTour.end());
     }
 
-    for (int v : newTour) {
-        point p = origTour[v];
-        cout << p.name << "," << p.year << "," << (p.essential ? "X," : " ,") << 1 << endl;
+    {
+        int pos = 0;
+        cout << newTour.size() << "\n";
+        for (int i = 0; i < newTour.size(); i++) {
+            point p = origTour[newTour[i]];
+            if (i > 0 && newTour[i - 1] + 1 == newTour[i])
+                pos += p.weightToPrev;
+            cout << p.name << "," << p.year << "," << (p.essential ? "X," : " ,") << pos << "\n";
+        }
     }
 
     return 0;
