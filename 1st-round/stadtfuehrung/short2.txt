@@ -1,0 +1,13 @@
+12
+Brauerei,1613, ,0
+Karzer,1665,X,80
+Rathaus,1678, ,150
+Rathaus,1739, ,150
+Euler-Brücke,1768, ,330
+Fibonacci-Gaststätte,1820,X,360
+Schiefes Haus,1823, ,480
+Theater,1880, ,610
+Emmy-Noether-Campus,1912,X,740
+Emmy-Noether-Campus,1998,X,740
+Euler-Brücke,1999, ,870
+Brauerei,2012, ,1020

@@ -1,0 +1,17 @@
+16
+Marktplatz,1549, ,0
+Marktplatz,1562, ,0
+Springbrunnen,1571, ,80
+Dom,1596,X,150
+Bogenschütze,1610, ,270
+Bogenschütze,1683, ,270
+Schnecke,1698,X,420
+Fischweiher,1710, ,600
+Reiterhof,1728,X,720
+Schnecke,1742, ,860
+Schmiede,1765, ,1030
+Große Gabel,1794, ,1140
+Große Gabel,1874, ,1140
+Fingerhut,1917,X,1210
+Stadion,1934, ,1330
+Marktplatz,1962, ,1420
