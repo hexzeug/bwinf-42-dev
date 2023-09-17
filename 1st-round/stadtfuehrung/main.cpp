@@ -17,11 +17,11 @@ int main() {
     list<int> essPath;
     
     {
-        int N;
-        cin >> N;
+        string NStr;
+        getline(cin, NStr);
+        int N = stoi(NStr);
 
         unordered_map<string, int> nameMap;
-        unordered_map<string, int> nameMapBeforeEntry;
         origTour.resize(N);
 
         int oldPos = 0;
@@ -36,21 +36,26 @@ int main() {
 
             origTour[i] = {name, stoi(yearStr), ess, pos - oldPos};
 
-            if (nameMap.count(name) > 0 && nameMap[name] >= essPath.back()) {
+            if (nameMap.find(name) != nameMap.end() && nameMap[name] >= essPath.back())
                 origTour[nameMap[name]].skipTo = i;
-            }
             nameMap[name] = i;
-            if (essPath.empty())
-                nameMapBeforeEntry[name] = i;
 
             if (ess) essPath.push_back(i);
 
             oldPos = pos;
         }
 
-        for (int i = essPath.back(); i < N; i++)
-            if (nameMapBeforeEntry.count(origTour[i].name) > 0)
-                origTour[i].skipTo = nameMapBeforeEntry[origTour[i].name];
+        for (int i = 0; i < N; i++) {
+            string name = origTour[i].name;
+
+            int v = nameMap[name];
+            
+            if (nameMap[name] != i && nameMap[name] >= essPath.back())
+                origTour[nameMap[name]].skipTo = i;
+            nameMap[name] = i;
+
+            if (origTour[i].essential) break;
+        }
     }
 
     int entry = essPath.front();
