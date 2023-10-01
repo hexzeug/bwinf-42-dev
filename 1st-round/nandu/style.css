@@ -48,10 +48,10 @@ input[type='file'] {
   --border: 1px;
 
   width: calc(var(--size) + var(--border));
-  height: calc(2 * var(--size) + var(--border));
+  height: calc(var(--size) * 2 + var(--border));
 
   border: solid var(--border) black;
-  margin: calc(-1 * var(--border));
+  margin: calc(-2 * var(--border));
 
   display: inline-block;
   position: relative;
@@ -59,7 +59,12 @@ input[type='file'] {
   &:is(.struct > *) {
     position: absolute;
     top: calc(var(--y, 0) * var(--size));
-    left: calc(var(--x, 0) * var(--size));
+    left: calc(var(--x, 0) * var(--size) + 25%);
+
+    transform: translate(-50%, calc(-25% - var(--border) / 4));
+    &.io {
+      transform: translate(-50%, -50%);
+    }
   }
 
   &.white {
@@ -82,29 +87,66 @@ input[type='file'] {
     background: linear-gradient(to bottom, #00a8e7, #b1dffa, #00a8e7);
   }
 
-  &::before,
-  &::after {
-    content: '';
-    display: inline-block;
+  &.io {
+    height: calc(var(--size) + var(--border));
 
-    width: calc(var(--size) / 2 - 2 * var(--border));
-    height: calc(var(--size) / 2 - 2 * var(--border));
+    &::after {
+      content: '';
+      display: inline-block;
+      position: absolute;
+      top: 0;
+      left: 0;
 
-    border: var(--border) solid black;
-    border-radius: 100%;
-    clip-path: inset(0 0 0 calc(var(--size) / 4));
+      width: 75%;
+      height: 100%;
 
-    position: absolute;
-    left: calc(-1 * var(--size) / 4);
-
-    background-color: black;
+      background: linear-gradient(to right, #e638116b, transparent),
+        linear-gradient(to bottom, #fbc100, #ffe600, #fbc100);
+      clip-path: polygon(0% 30%, 100% 20%, 100% 80%, 0% 70%);
+    }
   }
 
-  &::before {
-    top: calc(var(--size) / 4);
+  &.torch {
+    background: white;
   }
 
-  &::after {
-    bottom: calc(var(--size) / 4);
+  &.light {
+    border: none;
+
+    &:not(.active)::after {
+      background: linear-gradient(
+        to right,
+        rgba(0, 0, 0, 10%) 0%,
+        rgba(0, 0, 0, 0) 70%
+      );
+    }
+  }
+
+  &:not(.io) {
+    &::before,
+    &::after {
+      content: '';
+      display: inline-block;
+
+      width: calc(var(--size) / 2 - 2 * var(--border));
+      height: calc(var(--size) / 2 - 2 * var(--border));
+
+      border: var(--border) solid black;
+      border-radius: 100%;
+      clip-path: inset(0 0 0 calc(var(--size) / 4));
+
+      position: absolute;
+      left: calc(-1 * var(--size) / 4);
+
+      background-color: black;
+    }
+
+    &::before {
+      top: calc(var(--size) / 4);
+    }
+
+    &::after {
+      bottom: calc(var(--size) / 4);
+    }
   }
 }

@@ -28,6 +28,15 @@ class List {
       node = node.next;
     }
   }
+
+  clear() {
+    let node = this.head;
+    while (node) {
+      node.list = null;
+      node = node.next;
+    }
+    this.head = null;
+  }
 }
 
 document.querySelector('#importFile').addEventListener(
@@ -50,11 +59,9 @@ document.addEventListener(
   false
 );
 
-const struct = {
-  in: [],
-  out: [],
-  blocks: new List(),
-};
+const struct = new List();
+
+const isIO = (block) => ['torch', 'light'].includes(block.type);
 
 const uploadStruct = async (file) => {
   console.log('importing struct from', file);
@@ -65,53 +72,127 @@ const uploadStruct = async (file) => {
   lines.splice(h);
   if (lines.length < h) throw new Error('incorrect format: bad height');
 
-  struct.in = [];
-  struct.out = [];
-  struct.blocks = new List();
+  struct.clear();
+  let colBuf = new Array(w);
   for (let i = 0; i < h; i++) {
     const cells = lines[i].split(/ +/).slice(0, w);
     if (cells.length < w) throw new Error('incorrect format: bad width');
+
+    const column = new Array(w);
     for (let j = 0; j < w; j++) {
       const cell = cells[j];
-      if (cell === 'X') continue;
-      if (i === 0) {
-        if (cell.startsWith('Q')) struct.in.push(j);
-        continue;
-      }
-      if (i === h - 1) {
-        if (cell.startsWith('L')) struct.out.push(j);
-        continue;
-      }
-
       let block;
-      if (cell === 'W') {
-        block = { type: 'white', pos: [i, j], out: true };
+
+      if (cell === 'X') {
+        continue;
+      } else if (cell.startsWith('Q')) {
+        block = {
+          type: 'torch',
+          count: true,
+          out: false,
+        };
+      } else if (cell.startsWith('L')) {
+        block = {
+          type: 'light',
+          count: true,
+          out: false,
+          prev: colBuf[j],
+        };
+        if (colBuf[j].pos[1] === j) colBuf[j].nextTop = block;
+        else colBuf[j].nextBot = block;
+      } else if (cell === 'W') {
+        block = { type: 'white', out: true };
       } else if (cell === 'B') {
-        block = { type: 'blue', pos: [i, j], outTop: false, outBot: false };
+        block = { type: 'blue', outTop: false, outBot: false };
       } else if (cell === 'R') {
-        block = { type: 'red', pos: [i, j], flipped: false, out: true };
+        block = { type: 'red', flipped: false, out: true };
       } else if (cell === 'r') {
-        block = { type: 'red', pos: [i, j], flipped: true, out: true };
+        block = { type: 'red', flipped: true, out: true };
       } else {
         throw new Error('incorrect format: bad symbol');
       }
-      j++;
 
-      const remove = struct.blocks.add(block);
+      block.pos = [i, j];
+      if (block.type != 'light') column[j] = block;
+      if (!isIO(block)) {
+        column[j + 1] = block;
+        if (block.type === 'red') {
+          block.prev = colBuf[j + block.flipped];
+        } else {
+          block.prevTop = colBuf[j];
+          block.prevBot = colBuf[j + 1];
+        }
+
+        for (let k = 0; k < 2; k++) {
+          if (!colBuf[j]) {
+            if (i === 1) {
+              const torch = {
+                type: 'torch',
+                pos: [i - 1, j],
+                count: false,
+                out: false,
+              };
+              if (block.type !== 'red' || (k === 0) !== block.flipped)
+                torch.next = block;
+              torch.remover = struct.add(torch);
+            }
+          } else if (isIO(colBuf[j])) {
+            colBuf[j].next = block;
+          } else if (colBuf[j].pos[1] === j) {
+            colBuf[j].nextTop = block;
+          } else {
+            colBuf[j].nextBot = block;
+          }
+          j++;
+        }
+        j--;
+      }
+
+      block.remover = struct.add(block);
+    }
+    for (const block of colBuf) {
+      if (!block || isIO(block)) continue;
+      if (!block.nextTop && !column[block.pos[1]]) {
+        const light = {
+          type: 'light',
+          pos: [i, block.pos[1]],
+          count: false,
+          out: false,
+          prev: block,
+        };
+        light.remover = struct.add(light);
+        block.nextTop = light;
+      }
+      if (!block.nextBot && !column[block.pos[1] + 1]) {
+        const light = {
+          type: 'light',
+          pos: [i, block.pos[1] + 1],
+          count: false,
+          out: false,
+          prev: block,
+        };
+        light.remover = struct.add(light);
+        block.nextBot = light;
+      }
     }
 
-    rerenderStruct();
+    // todo save colBuf
+    colBuf = column;
   }
+  rerenderStruct();
 };
 
 const rerenderStruct = () => {
   const structElm = document.querySelector('#struct');
   const blockElms = [];
-  for (const block of struct.blocks) {
+  for (const block of struct) {
     const elm = document.createElement('div');
     elm.classList.add('block', block.type);
     if (block.type === 'red' && block.flipped) elm.classList.add('flipped');
+    if (isIO(block)) elm.classList.add('io');
     elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
+    if (isIO(block)) elm.setAttribute('data-debug', block.count);
+    block.elm = elm;
     blockElms.push(elm);
   }
   structElm.replaceChildren(...blockElms);
