@@ -1,0 +1,110 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+
+  background: #ffd94d;
+}
+
+input[type='file'] {
+  display: none;
+}
+
+.screen {
+  height: 100svh;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.nav {
+  --gap: 2rem;
+
+  padding: calc(var(--gap) / 2) var(--gap);
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+}
+
+.canvas {
+  height: 100%;
+
+  background: radial-gradient(closest-side, #fffdf6, #ffd94d);
+}
+
+.struct {
+  position: relative;
+
+  min-height: 100%;
+}
+
+.block {
+  --size: 30px;
+  --border: 1px;
+
+  width: calc(var(--size) + var(--border));
+  height: calc(2 * var(--size) + var(--border));
+
+  border: solid var(--border) black;
+  margin: calc(-1 * var(--border));
+
+  display: inline-block;
+  position: relative;
+
+  &:is(.struct > *) {
+    position: absolute;
+    top: calc(var(--y, 0) * var(--size));
+    left: calc(var(--x, 0) * var(--size));
+  }
+
+  &.white {
+    background: linear-gradient(to bottom, #d1d1d1, #fbfbfb, #d1d1d1);
+  }
+
+  &.red {
+    background: linear-gradient(to bottom, #e63911, #f7a800, #e63911);
+
+    &:not(.flipped)::after {
+      content: none;
+    }
+
+    &.flipped::before {
+      content: none;
+    }
+  }
+
+  &.blue {
+    background: linear-gradient(to bottom, #00a8e7, #b1dffa, #00a8e7);
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    display: inline-block;
+
+    width: calc(var(--size) / 2 - 2 * var(--border));
+    height: calc(var(--size) / 2 - 2 * var(--border));
+
+    border: var(--border) solid black;
+    border-radius: 100%;
+    clip-path: inset(0 0 0 calc(var(--size) / 4));
+
+    position: absolute;
+    left: calc(-1 * var(--size) / 4);
+
+    background-color: black;
+  }
+
+  &::before {
+    top: calc(var(--size) / 4);
+  }
+
+  &::after {
+    bottom: calc(var(--size) / 4);
+  }
+}

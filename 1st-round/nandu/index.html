@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nandu - 42th German Federal Competition in Computer Science</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="screen">
+      <div class="nav">
+        <div class="title">
+          <h1>Nandu</h1>
+        </div>
+        <div class="editor">
+          <div class="block white"></div>
+          <div class="block red"></div>
+          <div class="block blue"></div>
+          <div class="trash"></div>
+        </div>
+        <div class="files">
+          <button onclick="this.children[0].click()">
+            <input id="importFile" type="file" accept="text/plain" />
+            Import Struct
+          </button>
+          <button>Export Struct</button>
+        </div>
+      </div>
+      <div class="canvas">
+        <div class="input"></div>
+        <div class="struct" id="struct">
+          <div class="block red flipped"></div>
+        </div>
+        <div class="output"></div>
+      </div>
+    </main>
+  </body>
+  <script src="main.js"></script>
+</html>
