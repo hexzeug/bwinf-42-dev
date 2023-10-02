@@ -1,3 +1,23 @@
+// Utils
+
+const isIO = (block) => ['torch', 'light'].includes(block.type);
+
+const readOut = (block, at) =>
+  block.type !== 'blue'
+    ? block.out
+    : block.pos[1] === at
+    ? block.outTop
+    : block.outBot;
+
+const generateName = () => {
+  if (!fileMeta.name) return 'nandu';
+  if (fileMeta.saved) return fileMeta.name;
+  return fileMeta.name + '(modified)';
+};
+
+const blocksToBin = (blocks) =>
+  blocks.map((block) => (block.out ? '1' : '0')).join('');
+
 class List {
   constructor() {
     this.head = null;
@@ -39,11 +59,21 @@ class List {
   }
 }
 
+// Global variables
+
+const struct = new List();
+const fileMeta = {
+  saved: true,
+  name: null,
+};
+
+// Files
+
 document.querySelector('#importFile').addEventListener(
   'change',
   (e) => {
     const file = e.target.files[0];
-    if (file && file.type === 'text/plain') uploadStruct(file);
+    if (file && file.type === 'text/plain') importStruct(file);
   },
   false
 );
@@ -54,16 +84,12 @@ document.addEventListener(
     e.stopPropagation();
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type === 'text/plain') uploadStruct(file);
+    if (file && file.type === 'text/plain') importStruct(file);
   },
   false
 );
 
-const struct = new List();
-
-const isIO = (block) => ['torch', 'light'].includes(block.type);
-
-const uploadStruct = async (file) => {
+const importStruct = async (file) => {
   console.log('importing struct from', file);
   const content = await file.text();
   const [meta, ...lines] = content.split(/\r?\n/);
@@ -81,6 +107,17 @@ const uploadStruct = async (file) => {
       throw new Error('incorrect format: bad token', cell);
     });
   });
+
+  if (
+    !fileMeta.saved &&
+    !confirm("You haven't saved the current struct.\nThis will override it.")
+  ) {
+    console.log('canceled import');
+    return;
+  }
+
+  fileMeta.saved = true;
+  fileMeta.name = file.name.replace(/\.txt$/, '');
 
   struct.clear();
   document.getElementById('struct').replaceChildren();
@@ -201,14 +238,48 @@ const uploadStruct = async (file) => {
   update(...firstCol);
 };
 
-const readOut = (block, at) =>
-  block.type !== 'blue'
-    ? block.out
-    : block.pos[1] === at
-    ? block.outTop
-    : block.outBot;
+document
+  .querySelector('#generateTable')
+  .addEventListener('click', () => generateTable(), false);
+
+const generateTable = () => {
+  const inputs = [];
+  const outputs = [];
+  for (const block of struct) {
+    if (!block.count) continue;
+    if (block.type === 'torch') inputs.push(block);
+    if (block.type === 'light') outputs.push(block);
+  }
+
+  const oldInputs = inputs.map((block) => block.out);
+
+  const lines = [];
+  for (let i = 0; i < 2 ** inputs.length; i++) {
+    const updates = [];
+    for (let j = 0; j < inputs.length; j++) {
+      const oldOut = inputs[j].out;
+      inputs[j].out = (i >> j) & 0x1;
+      if (oldOut !== inputs[j].out) updates.push(inputs[j]);
+    }
+    updateSilently(...updates);
+    lines.push(blocksToBin(inputs) + ' ' + blocksToBin(outputs));
+  }
+
+  oldInputs.forEach((input, i) => (inputs[i].out = input));
+  updateSilently(...inputs);
+
+  saveFile(`${generateName()}_table.txt`, lines.join('\n'));
+};
+
+const saveFile = (name, content) => {
+  console.log('save to', name);
+  console.log(content);
+};
+
+// Rendering
 
 const update = (...startBlocks) => {
+  console.log('updating struct from', startBlocks);
   updateSilently(...startBlocks).forEach(updateElement);
 };
 
@@ -248,24 +319,29 @@ const updateSilently = (...startBlocks) => {
   return startBlocks;
 };
 
-const updateElement = (block) => {
-  const elm = block.elm ? block.elm : document.createElement('div');
+const createElement = (block) => {
+  const elm = document.createElement('div');
+  block.elm = elm;
+  elm.classList.add('block', block.type);
+  elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
 
-  if (!block.elm) {
-    block.elm = elm;
-    elm.classList.add('block', block.type);
-    elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
-
-    switch (block.type) {
-      case 'torch':
-        elm.addEventListener('click', () => toggleTorch(block));
-        break;
-      case 'red':
-        if (block.flipped) elm.classList.add('flipped');
-    }
-
-    document.getElementById('struct').appendChild(elm);
+  switch (block.type) {
+    case 'torch':
+      elm.addEventListener('click', () => {
+        block.out = !block.out;
+        update(block);
+      });
+      break;
+    case 'red':
+      if (block.flipped) elm.classList.add('flipped');
   }
+
+  document.getElementById('struct').appendChild(elm);
+  return elm;
+};
+
+const updateElement = (block) => {
+  const elm = block.elm ? block.elm : createElement(block);
 
   switch (block.type) {
     case 'torch':
@@ -286,9 +362,4 @@ const updateElement = (block) => {
       else elm.classList.remove('active');
       break;
   }
-};
-
-const toggleTorch = (block) => {
-  block.out = !block.out;
-  update(block);
 };
