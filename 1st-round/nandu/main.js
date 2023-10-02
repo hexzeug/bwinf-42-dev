@@ -74,6 +74,8 @@ const uploadStruct = async (file) => {
 
   struct.clear();
   let colBuf = new Array(w);
+  let firstCol;
+
   for (let i = 0; i < h; i++) {
     const cells = lines[i].split(/ +/).slice(0, w);
     if (cells.length < w) throw new Error('incorrect format: bad width');
@@ -176,10 +178,58 @@ const uploadStruct = async (file) => {
       }
     }
 
-    // todo save colBuf
+    if (i === 1) firstCol = colBuf.filter((x) => x !== undefined);
     colBuf = column;
   }
+
+  updateSilently(...firstCol);
   rerenderStruct();
+};
+
+const updateSilently = (...queue) => {
+  console.log('updating (silently) struct from', queue);
+
+  const extractOut = (block, at) =>
+    block.type !== 'blue'
+      ? block.out
+      : block.pos[1] === at
+      ? block.outTop
+      : block.outBot;
+  for (const block of queue) {
+    switch (block.type) {
+      case 'light':
+        block.out = extractOut(block.prev, block.pos[1]);
+        break;
+      case 'white':
+        block.out = !(
+          extractOut(block.prevTop, block.pos[1]) &&
+          extractOut(block.prevBot, block.pos[1] + 1)
+        );
+        break;
+      case 'red':
+        block.out = !(!block.flipped
+          ? extractOut(block.prev, block.pos[1])
+          : extractOut(block.prev, block.pos[1] + 1));
+        break;
+      case 'blue':
+        block.outTop = extractOut(block.prevTop, block.pos[1]);
+        block.outBot = extractOut(block.prevBot, block.pos[1] + 1);
+    }
+    if (block.next && !block.next.updated) {
+      block.next.updated = true;
+      queue.push(block.next);
+    }
+    if (block.nextTop && !block.nextTop.updated) {
+      block.nextTop.updated = true;
+      queue.push(block.nextTop);
+    }
+    if (block.nextBot && !block.nextBot.updated) {
+      block.nextBot.updated = true;
+      queue.push(block.nextBot);
+    }
+  }
+  for (const block of queue) delete block.updated;
+  return queue;
 };
 
 const rerenderStruct = () => {
