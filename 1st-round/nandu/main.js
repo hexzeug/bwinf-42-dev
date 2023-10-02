@@ -182,8 +182,7 @@ const uploadStruct = async (file) => {
     colBuf = column;
   }
 
-  updateSilently(...firstCol);
-  rerenderStruct();
+  update(...firstCol);
 };
 
 const readOut = (block, at) =>
@@ -193,10 +192,14 @@ const readOut = (block, at) =>
     ? block.outTop
     : block.outBot;
 
-const updateSilently = (...queue) => {
-  console.log('updating (silently) struct from', queue);
+const update = (...startBlocks) => {
+  updateSilently(...startBlocks).forEach(updateElement);
+};
 
-  for (const block of queue) {
+const updateSilently = (...startBlocks) => {
+  console.log('updating (silently) struct from', startBlocks);
+
+  for (const block of startBlocks) {
     switch (block.type) {
       case 'light':
         block.out = readOut(block.prev, block.pos[1]);
@@ -216,48 +219,62 @@ const updateSilently = (...queue) => {
     }
     if (block.next && !block.next.updated) {
       block.next.updated = true;
-      queue.push(block.next);
+      startBlocks.push(block.next);
     }
     if (block.nextTop && !block.nextTop.updated) {
       block.nextTop.updated = true;
-      queue.push(block.nextTop);
+      startBlocks.push(block.nextTop);
     }
     if (block.nextBot && !block.nextBot.updated) {
       block.nextBot.updated = true;
-      queue.push(block.nextBot);
+      startBlocks.push(block.nextBot);
     }
   }
-  for (const block of queue) delete block.updated;
-  return queue;
+  for (const block of startBlocks) delete block.updated;
+  return startBlocks;
 };
 
-const createElement = (block) => {
-  const elm = document.createElement('div');
-  elm.classList.add('block', block.type);
-  elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
+const updateElement = (block) => {
+  const elm = block.elm ? block.elm : document.createElement('div');
+
+  if (!block.elm) {
+    block.elm = elm;
+    elm.classList.add('block', block.type);
+    elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
+
+    switch (block.type) {
+      case 'torch':
+        elm.addEventListener('click', () => toggleTorch(block));
+        break;
+      case 'red':
+        if (block.flipped) elm.classList.add('flipped');
+    }
+
+    document.getElementById('struct').appendChild(elm);
+  }
 
   switch (block.type) {
     case 'torch':
     case 'light':
       if (block.out) elm.classList.add('active');
+      else elm.classList.remove('active');
       break;
     case 'white':
     case 'blue':
       if (readOut(block.prevTop, block.pos[1])) elm.classList.add('activeTop');
+      else elm.classList.remove('activeTop');
       if (readOut(block.prevBot, block.pos[1] + 1))
         elm.classList.add('activeBot');
+      else elm.classList.remove('activeBot');
       break;
     case 'red':
-      if (block.flipped) elm.classList.add('flipped');
       if (!block.out) elm.classList.add('active');
+      else elm.classList.remove('active');
       break;
   }
-
-  return (block.elm = elm);
 };
 
-const rerenderStruct = () => {
-  const structElm = document.querySelector('#struct');
-
-  structElm.replaceChildren(...[...struct].map(createElement));
+const toggleTorch = (block) => {
+  block.out = !block.out;
+  update(block);
 };
