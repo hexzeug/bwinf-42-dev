@@ -186,34 +186,33 @@ const uploadStruct = async (file) => {
   rerenderStruct();
 };
 
+const readOut = (block, at) =>
+  block.type !== 'blue'
+    ? block.out
+    : block.pos[1] === at
+    ? block.outTop
+    : block.outBot;
+
 const updateSilently = (...queue) => {
   console.log('updating (silently) struct from', queue);
 
-  const extractOut = (block, at) =>
-    block.type !== 'blue'
-      ? block.out
-      : block.pos[1] === at
-      ? block.outTop
-      : block.outBot;
   for (const block of queue) {
     switch (block.type) {
       case 'light':
-        block.out = extractOut(block.prev, block.pos[1]);
+        block.out = readOut(block.prev, block.pos[1]);
         break;
       case 'white':
         block.out = !(
-          extractOut(block.prevTop, block.pos[1]) &&
-          extractOut(block.prevBot, block.pos[1] + 1)
+          readOut(block.prevTop, block.pos[1]) &&
+          readOut(block.prevBot, block.pos[1] + 1)
         );
         break;
       case 'red':
-        block.out = !(!block.flipped
-          ? extractOut(block.prev, block.pos[1])
-          : extractOut(block.prev, block.pos[1] + 1));
+        block.out = !readOut(block.prev, block.pos[1] + block.flipped);
         break;
       case 'blue':
-        block.outTop = extractOut(block.prevTop, block.pos[1]);
-        block.outBot = extractOut(block.prevBot, block.pos[1] + 1);
+        block.outTop = readOut(block.prevTop, block.pos[1]);
+        block.outBot = readOut(block.prevBot, block.pos[1] + 1);
     }
     if (block.next && !block.next.updated) {
       block.next.updated = true;
@@ -232,18 +231,33 @@ const updateSilently = (...queue) => {
   return queue;
 };
 
+const createElement = (block) => {
+  const elm = document.createElement('div');
+  elm.classList.add('block', block.type);
+  elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
+
+  switch (block.type) {
+    case 'torch':
+    case 'light':
+      if (block.out) elm.classList.add('active');
+      break;
+    case 'white':
+    case 'blue':
+      if (readOut(block.prevTop, block.pos[1])) elm.classList.add('activeTop');
+      if (readOut(block.prevBot, block.pos[1] + 1))
+        elm.classList.add('activeBot');
+      break;
+    case 'red':
+      if (block.flipped) elm.classList.add('flipped');
+      if (!block.out) elm.classList.add('active');
+      break;
+  }
+
+  return (block.elm = elm);
+};
+
 const rerenderStruct = () => {
   const structElm = document.querySelector('#struct');
-  const blockElms = [];
-  for (const block of struct) {
-    const elm = document.createElement('div');
-    elm.classList.add('block', block.type);
-    if (block.type === 'red' && block.flipped) elm.classList.add('flipped');
-    if (isIO(block)) elm.classList.add('io');
-    elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
-    if (isIO(block)) elm.setAttribute('data-debug', block.count);
-    block.elm = elm;
-    blockElms.push(elm);
-  }
-  structElm.replaceChildren(...blockElms);
+
+  structElm.replaceChildren(...[...struct].map(createElement));
 };
