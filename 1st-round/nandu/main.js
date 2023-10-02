@@ -69,49 +69,65 @@ const uploadStruct = async (file) => {
   const [meta, ...lines] = content.split(/\r?\n/);
   const [w, h] = meta.split(/ +/).map((x) => parseInt(x));
   if (!w || !h) throw new Error('incorrect format: bad meta line');
-  lines.splice(h);
   if (lines.length < h) throw new Error('incorrect format: bad height');
 
+  const tokens = lines.slice(0, h).map((line) => {
+    const cells = line.split(/ +/).slice(0, w);
+    if (cells.length < w) throw new Error('incorrect format: bad width');
+    return cells.map((cell) => {
+      if (cell.startsWith('Q')) return 'Q';
+      if (cell.startsWith('L')) return 'L';
+      if (['X', 'R', 'r', 'B', 'W'].includes(cell)) return cell;
+      throw new Error('incorrect format: bad token', cell);
+    });
+  });
+
   struct.clear();
+  document.getElementById('struct').replaceChildren();
+
   let colBuf = new Array(w);
   let firstCol;
 
   for (let i = 0; i < h; i++) {
-    const cells = lines[i].split(/ +/).slice(0, w);
-    if (cells.length < w) throw new Error('incorrect format: bad width');
+    const cells = tokens[i];
 
     const column = new Array(w);
     for (let j = 0; j < w; j++) {
       const cell = cells[j];
       let block;
 
-      if (cell === 'X') {
-        continue;
-      } else if (cell.startsWith('Q')) {
-        block = {
-          type: 'torch',
-          count: true,
-          out: false,
-        };
-      } else if (cell.startsWith('L')) {
-        block = {
-          type: 'light',
-          count: true,
-          out: false,
-          prev: colBuf[j],
-        };
-        if (colBuf[j].pos[1] === j) colBuf[j].nextTop = block;
-        else colBuf[j].nextBot = block;
-      } else if (cell === 'W') {
-        block = { type: 'white', out: true };
-      } else if (cell === 'B') {
-        block = { type: 'blue', outTop: false, outBot: false };
-      } else if (cell === 'R') {
-        block = { type: 'red', flipped: false, out: true };
-      } else if (cell === 'r') {
-        block = { type: 'red', flipped: true, out: true };
-      } else {
-        throw new Error('incorrect format: bad symbol');
+      switch (cell) {
+        case 'X':
+          continue;
+        case 'Q':
+          block = {
+            type: 'torch',
+            count: true,
+            out: false,
+          };
+          break;
+        case 'L':
+          block = {
+            type: 'light',
+            count: true,
+            out: false,
+            prev: colBuf[j],
+          };
+          if (colBuf[j].pos[1] === j) colBuf[j].nextTop = block;
+          else colBuf[j].nextBot = block;
+          break;
+        case 'W':
+          block = { type: 'white', out: true };
+          break;
+        case 'B':
+          block = { type: 'blue', outTop: false, outBot: false };
+          break;
+        case 'R':
+          block = { type: 'red', flipped: false, out: true };
+          break;
+        case 'r':
+          block = { type: 'red', flipped: true, out: true };
+          break;
       }
 
       block.pos = [i, j];
@@ -197,8 +213,6 @@ const update = (...startBlocks) => {
 };
 
 const updateSilently = (...startBlocks) => {
-  console.log('updating (silently) struct from', startBlocks);
-
   for (const block of startBlocks) {
     switch (block.type) {
       case 'light':
