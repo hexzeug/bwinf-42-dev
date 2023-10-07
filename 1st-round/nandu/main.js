@@ -260,7 +260,7 @@ const updateElement = ([row, col]) => {
   switch (type) {
     case 'empty':
       if (col !== 0 && struct[row][col - 1].out) elm.classList.add('light');
-      if (col === 0 && struct[row][1].type !== 'empty')
+      if (col === 0 && struct[0].length > 1 && struct[row][1].type !== 'empty')
         elm.classList.add('torch');
     case 'white_bot':
     case 'red_bot':
@@ -327,16 +327,16 @@ document
   .querySelector('#generateTable')
   .addEventListener('click', () => generateTable());
 
-document
-  .querySelector('#animateTable')
-  .addEventListener('click', () => animateTable());
-
-const generateTable = () => {
+const generateTable = async () => {
   const ON = '#';
   const OFF = '.';
   const SP = ' ';
   const SEP = ' | ';
   const NL = '\n';
+  const FPS = 8;
+
+  if (tableAnimation.running) return;
+  const animate = document.querySelector('#animateTable').checked;
 
   const lines = [];
   let inWidth, outWidth;
@@ -353,6 +353,12 @@ const generateTable = () => {
       .map((inp) => (inp ? ON : OFF).padEnd(outWidth))
       .join(SP);
     lines[i] = inText + SEP + outText;
+    if (animate) {
+      render();
+      let res;
+      tableAnimation.interval = setTimeout(() => res(), 1000 / FPS);
+      await new Promise((r) => (res = r));
+    }
   }
   const inHeader = new Array(inSize)
     .fill(null)
@@ -364,21 +370,6 @@ const generateTable = () => {
     .join(SP);
   const table = inHeader + SEP + outHeader + NL + lines.join(NL);
   saveFile(generateName() + '_table', table);
-};
-
-const animateTable = () => {
-  const FPS = 8;
-
-  if (tableAnimation.running) return;
-
-  const iter = inputIterator();
-  tableAnimation.interval = setInterval(() => {
-    if (iter.next().done) {
-      clearInterval(tableAnimation.interval);
-      tableAnimation.interval = null;
-    }
-    render();
-  }, 1000 / FPS);
 };
 
 const inputIterator = function* () {
@@ -428,3 +419,7 @@ const generateName = () => {
   if (fileMeta.saved) return fileMeta.name;
   return fileMeta.name + '(modified)';
 };
+
+// Load inital page
+
+renderAfterResize();

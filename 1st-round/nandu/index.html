@@ -19,13 +19,19 @@
           <div class="trash"></div>
         </div>
         <div class="storage">
-          <button onclick="nextElementSibling.click()">Import Struct</button>
+          <button class="button" onclick="nextElementSibling.click()">
+            Import Struct
+          </button>
           <input id="importStruct" type="file" accept="text/plain" />
-          <button id="exportStruct">Export Struct</button>
+          <button class="button" id="exportStruct">Export Struct</button>
         </div>
         <div class="generation">
-          <button id="generateTable">Generate Table</button>
-          <button id="animateTable">Animate Table Generation</button>
+          <button class="button" id="generateTable">Generate Table</button>
+          <input id="animateTable" type="checkbox" />
+          <label class="checkbox" for="animateTable">
+            <span></span>
+            <span>Animate Table Generation</span>
+          </label>
         </div>
       </div>
       <div class="canvas">
