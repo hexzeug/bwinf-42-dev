@@ -17,7 +17,7 @@ const tableAnimation = {
 
 // Import
 
-document.querySelector('#importFile').addEventListener(
+document.querySelector('#importStruct').addEventListener(
   'change',
   (e) => {
     const file = e.target.files[0];
@@ -112,6 +112,52 @@ const importStruct = async (file) => {
 
   slowUpdate();
   renderAfterResize();
+};
+
+// Export
+
+document
+  .querySelector('#exportStruct')
+  .addEventListener('click', () => exportStruct());
+
+const exportStruct = () => {
+  const SP = ' ';
+  const NL = '\n';
+
+  let text = struct.length + SP + struct[0].length + NL;
+  let inCount = 0;
+  let outCount = 0;
+  struct[0].forEach((_, col) => {
+    struct.forEach((_, row) => {
+      if (row < 2 || row >= struct.length - 2) return;
+      switch (struct[row][col].type) {
+        case 'empty':
+          if (struct[row][col].input) text += ('Q' + ++inCount).padEnd(3);
+          else if (struct[row][col].output)
+            text += ('L' + ++outCount).padEnd(3);
+          else text += 'X  ';
+          break;
+        case 'white_top':
+        case 'white_bot':
+          text += 'W  ';
+          break;
+        case 'red_top_input':
+        case 'red_bot_input':
+          text += 'R  ';
+          break;
+        case 'red_top':
+        case 'red_bot':
+          text += 'r  ';
+          break;
+        case 'blue_top':
+        case 'blue_bot':
+          text += 'B  ';
+          break;
+      }
+    });
+    text += NL;
+  });
+  saveFile(generateName(), text);
 };
 
 // Update
