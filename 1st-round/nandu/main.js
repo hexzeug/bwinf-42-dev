@@ -282,8 +282,8 @@ const fastGenerateTable = () => {
   for (const [i, inputs, outputs] of inputIterator()) {
     if (!inSize) inSize = inputs.length;
     if (!outSize) outSize = outputs.length;
-    if (!inWidth) inWidth = Math.ceil(Math.log10(inSize)) + 1;
-    if (!outWidth) outWidth = Math.ceil(Math.log10(outSize)) + 1;
+    if (!inWidth) inWidth = Math.floor(Math.log10(inSize)) + 2;
+    if (!outWidth) outWidth = Math.floor(Math.log10(outSize)) + 2;
     const inText = inputs
       .map((inp) => (inp ? ON : OFF).padEnd(inWidth))
       .join(SP);
@@ -325,19 +325,25 @@ const inputIterator = function* () {
 };
 
 const binaryIterator = function* (exponent, reversed = false, top = true) {
-  if (exponent >= 1) {
-    yield* binaryIterator(exponent - 1, reversed, false);
-    yield exponent - 1;
-    yield* binaryIterator(exponent - 1, !reversed, false);
-    if (top) yield exponent - 1;
-  }
+  if (exponent < 1) return;
+  yield* binaryIterator(exponent - 1, reversed, false);
+  yield exponent - 1;
+  yield* binaryIterator(exponent - 1, !reversed, false);
+  if (top) yield exponent - 1;
 };
 
 // Handle files
 
 const saveFile = (name, content) => {
-  console.log('save to', name);
-  console.log(content);
+  if (!name.includes('.')) name += '.txt';
+  const file = new File([content], name, { type: 'text/plain' });
+  console.log('downloading', file);
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 const generateName = () => {
