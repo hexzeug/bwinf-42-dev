@@ -8,6 +8,12 @@ const fileMeta = {
   saved: true,
   name: null,
 };
+const tableAnimation = {
+  interval: null,
+  get running() {
+    return Boolean(this.interval);
+  },
+};
 
 // Import
 
@@ -256,9 +262,15 @@ document.querySelector('#struct').addEventListener('click', (e) => {
   const block = struct[row][col];
   switch (block.type) {
     case 'empty':
-      if (col === 0 && struct[row][1].type !== 'empty') block.out = !block.out;
-      fastUpdate([row, col]);
-      render();
+      if (
+        !tableAnimation.running &&
+        col === 0 &&
+        struct[row][1].type !== 'empty'
+      ) {
+        block.out = !block.out;
+        fastUpdate([row, col]);
+        render();
+      }
       break;
   }
 });
@@ -267,9 +279,13 @@ document.querySelector('#struct').addEventListener('click', (e) => {
 
 document
   .querySelector('#generateTable')
-  .addEventListener('click', () => fastGenerateTable());
+  .addEventListener('click', () => generateTable());
 
-const fastGenerateTable = () => {
+document
+  .querySelector('#animateTable')
+  .addEventListener('click', () => animateTable());
+
+const generateTable = () => {
   const ON = '#';
   const OFF = '.';
   const SP = ' ';
@@ -302,6 +318,21 @@ const fastGenerateTable = () => {
     .join(SP);
   const table = inHeader + SEP + outHeader + NL + lines.join(NL);
   saveFile(generateName() + '_table', table);
+};
+
+const animateTable = () => {
+  const FPS = 8;
+
+  if (tableAnimation.running) return;
+
+  const iter = inputIterator();
+  tableAnimation.interval = setInterval(() => {
+    if (iter.next().done) {
+      clearInterval(tableAnimation.interval);
+      tableAnimation.interval = null;
+    }
+    render();
+  }, 1000 / FPS);
 };
 
 const inputIterator = function* () {
