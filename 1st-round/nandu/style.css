@@ -135,5 +135,9 @@ input[type='file'] {
 
   &.torch {
     background: white;
+
+    &.active {
+      background: orange;
+    }
   }
 }

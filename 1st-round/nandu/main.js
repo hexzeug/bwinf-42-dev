@@ -1,11 +1,3 @@
-// Utils
-
-const generateName = () => {
-  if (!fileMeta.name) return 'nandu';
-  if (fileMeta.saved) return fileMeta.name;
-  return fileMeta.name + '(modified)';
-};
-
 // Global variables
 
 const struct = [
@@ -74,7 +66,6 @@ const importStruct = async (file) => {
     struct[i] = Array.from({ length: h }, () => ({
       type: 'empty',
       out: false,
-      elm: createElement(),
     }));
 
   tokens.forEach((line, i) => {
@@ -194,8 +185,20 @@ const renderAfterResize = () => {
   const parent = document.querySelector('#struct');
   parent.style.setProperty('--rows', struct.length);
   parent.style.setProperty('--cols', struct[0].length);
-  render();
-  parent.replaceChildren(...struct.flatMap((x) => x.map((block) => block.elm)));
+  const elms = [];
+  struct.forEach((x, row) =>
+    x.forEach((block, col) => {
+      if (!block.elm) block.elm = createElement();
+      updateElement([row, col]);
+      elms.push(block.elm);
+    })
+  );
+  parent.replaceChildren(...elms);
+};
+
+const createElement = () => {
+  const elm = document.createElement('div');
+  return elm;
 };
 
 const updateElement = ([row, col]) => {
@@ -240,11 +243,6 @@ const updateElement = ([row, col]) => {
   }
 };
 
-const createElement = () => {
-  const elm = document.createElement('div');
-  return elm;
-};
-
 // Handle Interaction
 
 document.querySelector('#struct').addEventListener('click', (e) => {
@@ -269,38 +267,81 @@ document.querySelector('#struct').addEventListener('click', (e) => {
 
 document
   .querySelector('#generateTable')
-  .addEventListener('click', () => generateTable(), false);
+  .addEventListener('click', () => fastGenerateTable());
 
-const generateTable = () => {
-  const inputs = [];
-  const outputs = [];
-  for (const block of struct) {
-    if (!block.count) continue;
-    if (block.type === 'torch') inputs.push(block);
-    if (block.type === 'light') outputs.push(block);
-  }
-
-  const oldInputs = inputs.map((block) => block.out);
+const fastGenerateTable = () => {
+  const ON = '#';
+  const OFF = '.';
+  const SP = ' ';
+  const SEP = ' | ';
+  const NL = '\n';
 
   const lines = [];
-  for (let i = 0; i < 2 ** inputs.length; i++) {
-    const updates = [];
-    for (let j = 0; j < inputs.length; j++) {
-      const oldOut = inputs[j].out;
-      inputs[j].out = (i >> j) & 0x1;
-      if (oldOut !== inputs[j].out) updates.push(inputs[j]);
-    }
-    updateSilently(...updates);
-    lines.push(blocksToBin(inputs) + ' ' + blocksToBin(outputs));
+  let inWidth, outWidth;
+  let inSize, outSize;
+  for (const [i, inputs, outputs] of inputIterator()) {
+    if (!inSize) inSize = inputs.length;
+    if (!outSize) outSize = outputs.length;
+    if (!inWidth) inWidth = Math.ceil(Math.log10(inSize)) + 1;
+    if (!outWidth) outWidth = Math.ceil(Math.log10(outSize)) + 1;
+    const inText = inputs
+      .map((inp) => (inp ? ON : OFF).padEnd(inWidth))
+      .join(SP);
+    const outText = outputs
+      .map((inp) => (inp ? ON : OFF).padEnd(outWidth))
+      .join(SP);
+    lines[i] = inText + SEP + outText;
   }
-
-  oldInputs.forEach((input, i) => (inputs[i].out = input));
-  updateSilently(...inputs);
-
-  saveFile(`${generateName()}_table.txt`, lines.join('\n'));
+  const inHeader = new Array(inSize)
+    .fill(null)
+    .map((_, i) => ('Q' + (i + 1)).padEnd(inWidth))
+    .join(SP);
+  const outHeader = new Array(outSize)
+    .fill(null)
+    .map((_, i) => ('L' + (i + 1)).padEnd(outWidth))
+    .join(SP);
+  const table = inHeader + SEP + outHeader + NL + lines.join(NL);
+  saveFile(generateName() + '_table', table);
 };
+
+const inputIterator = function* () {
+  const inputs = [];
+  const outputs = [];
+  struct.forEach((x, row) =>
+    x.forEach((block, col) => {
+      if (block.input) inputs.push([row, col]);
+      if (block.output) outputs.push([row, col]);
+    })
+  );
+  for (const i of binaryIterator(inputs.length)) {
+    const [row, col] = inputs[i];
+    struct[row][col].out = !struct[row][col].out;
+    fastUpdate([row, col]);
+    const ins = inputs.map(([row, col]) => struct[row][col].out);
+    const outs = outputs.map(([row, col]) => struct[row][col - 1].out);
+    const idx = ins.reduce((p, c, i) => p | (c << (ins.length - 1 - i)), 0);
+    yield [idx, ins, outs];
+  }
+};
+
+const binaryIterator = function* (exponent, reversed = false, top = true) {
+  if (exponent >= 1) {
+    yield* binaryIterator(exponent - 1, reversed, false);
+    yield exponent - 1;
+    yield* binaryIterator(exponent - 1, !reversed, false);
+    if (top) yield exponent - 1;
+  }
+};
+
+// Handle files
 
 const saveFile = (name, content) => {
   console.log('save to', name);
   console.log(content);
+};
+
+const generateName = () => {
+  if (!fileMeta.name) return 'nandu';
+  if (fileMeta.saved) return fileMeta.name;
+  return fileMeta.name + '(modified)';
 };
