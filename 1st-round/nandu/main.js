@@ -1,73 +1,23 @@
 // Utils
 
-const isIO = (block) => ['torch', 'light'].includes(block.type);
-
-const readOut = (block, at) =>
-  block.type !== 'blue'
-    ? block.out
-    : block.pos[1] === at
-    ? block.outTop
-    : block.outBot;
-
 const generateName = () => {
   if (!fileMeta.name) return 'nandu';
   if (fileMeta.saved) return fileMeta.name;
   return fileMeta.name + '(modified)';
 };
 
-const blocksToBin = (blocks) =>
-  blocks.map((block) => (block.out ? '1' : '0')).join('');
-
-class List {
-  constructor() {
-    this.head = null;
-  }
-
-  add(value) {
-    const node = {
-      value,
-      next: this.head,
-      prev: null,
-      list: this,
-    };
-    if (this.head) this.head.prev = node;
-    this.head = node;
-    return () => {
-      if (!node.list) return;
-      if (node.next) node.next.prev = node.prev;
-      if (node.prev) node.prev.next = node.next;
-      else node.list.head = node.next;
-      node.list = null;
-    };
-  }
-
-  *[Symbol.iterator]() {
-    let node = this.head;
-    while (node) {
-      yield node.value;
-      node = node.next;
-    }
-  }
-
-  clear() {
-    let node = this.head;
-    while (node) {
-      node.list = null;
-      node = node.next;
-    }
-    this.head = null;
-  }
-}
-
 // Global variables
 
-const struct = new List();
+const struct = [
+  [{ type: 'empty', out: false }],
+  [{ type: 'empty', out: false }],
+];
 const fileMeta = {
   saved: true,
   name: null,
 };
 
-// Files
+// Import
 
 document.querySelector('#importFile').addEventListener(
   'change',
@@ -119,124 +69,203 @@ const importStruct = async (file) => {
   fileMeta.saved = true;
   fileMeta.name = file.name.replace(/\.txt$/, '');
 
-  struct.clear();
-  document.getElementById('struct').replaceChildren();
+  struct.length = w + 4;
+  for (let i = 0; i < struct.length; i++)
+    struct[i] = Array.from({ length: h }, () => ({
+      type: 'empty',
+      out: false,
+      elm: createElement(),
+    }));
 
-  let colBuf = new Array(w);
-  let firstCol;
-
-  for (let i = 0; i < h; i++) {
-    const cells = tokens[i];
-
-    const column = new Array(w);
-    for (let j = 0; j < w; j++) {
-      const cell = cells[j];
-      let block;
-
+  tokens.forEach((line, i) => {
+    for (let j = 0; j < line.length; j++) {
+      const cell = line[j];
+      const col = i;
+      const row = j + 2;
       switch (cell) {
-        case 'X':
-          continue;
         case 'Q':
-          block = {
-            type: 'torch',
-            count: true,
-            out: false,
-          };
+          struct[row][col].input = true;
           break;
         case 'L':
-          block = {
-            type: 'light',
-            count: true,
-            out: false,
-            prev: colBuf[j],
-          };
-          if (colBuf[j].pos[1] === j) colBuf[j].nextTop = block;
-          else colBuf[j].nextBot = block;
+          struct[row][col].output = true;
           break;
         case 'W':
-          block = { type: 'white', out: true };
+          struct[row][col].type = 'white_top';
+          struct[row + 1][col].type = 'white_bot';
+          j++;
           break;
         case 'B':
-          block = { type: 'blue', outTop: false, outBot: false };
+          struct[row][col].type = 'blue_top';
+          struct[row + 1][col].type = 'blue_bot';
+          j++;
           break;
         case 'R':
-          block = { type: 'red', flipped: false, out: true };
+          struct[row][col].type = 'red_top_input';
+          struct[row + 1][col].type = 'red_bot';
+          j++;
           break;
         case 'r':
-          block = { type: 'red', flipped: true, out: true };
+          struct[row][col].type = 'red_top';
+          struct[row + 1][col].type = 'red_bot_input';
+          j++;
           break;
       }
-
-      block.pos = [i, j];
-      if (block.type != 'light') column[j] = block;
-      if (!isIO(block)) {
-        column[j + 1] = block;
-        if (block.type === 'red') {
-          block.prev = colBuf[j + block.flipped];
-        } else {
-          block.prevTop = colBuf[j];
-          block.prevBot = colBuf[j + 1];
-        }
-
-        for (let k = 0; k < 2; k++) {
-          if (!colBuf[j]) {
-            if (i === 1) {
-              const torch = {
-                type: 'torch',
-                pos: [i - 1, j],
-                count: false,
-                out: false,
-              };
-              if (block.type !== 'red' || (k === 0) !== block.flipped)
-                torch.next = block;
-              torch.remover = struct.add(torch);
-            }
-          } else if (isIO(colBuf[j])) {
-            colBuf[j].next = block;
-          } else if (colBuf[j].pos[1] === j) {
-            colBuf[j].nextTop = block;
-          } else {
-            colBuf[j].nextBot = block;
-          }
-          j++;
-        }
-        j--;
-      }
-
-      block.remover = struct.add(block);
     }
-    for (const block of colBuf) {
-      if (!block || isIO(block)) continue;
-      if (!block.nextTop && !column[block.pos[1]]) {
-        const light = {
-          type: 'light',
-          pos: [i, block.pos[1]],
-          count: false,
-          out: false,
-          prev: block,
-        };
-        light.remover = struct.add(light);
-        block.nextTop = light;
-      }
-      if (!block.nextBot && !column[block.pos[1] + 1]) {
-        const light = {
-          type: 'light',
-          pos: [i, block.pos[1] + 1],
-          count: false,
-          out: false,
-          prev: block,
-        };
-        light.remover = struct.add(light);
-        block.nextBot = light;
-      }
-    }
+  });
 
-    if (i === 1) firstCol = colBuf.filter((x) => x !== undefined);
-    colBuf = column;
-  }
-
-  update(...firstCol);
+  slowUpdate();
+  renderAfterResize();
 };
+
+// Update
+
+const slowUpdate = () => {
+  for (const col of struct[0].keys()) {
+    for (const row of struct.keys()) {
+      struct[row][col].out = calcBlockOut([row, col]);
+    }
+  }
+};
+
+const fastUpdate = (...changes) => {
+  const updatable = ([row, col]) =>
+    !['empty', 'red_top', 'red_bot'].includes(struct[row][col].type);
+  for (let [row, col] of changes) {
+    let out;
+    switch (struct[row][col].type) {
+      case 'white_bot':
+        row--;
+      case 'white_top':
+        out = calcBlockOut([row, col]);
+        if (struct[row][col].out === out) break;
+        struct[row][col].out = out;
+        struct[row + 1][col].out = out;
+        if (updatable([row, col + 1])) changes.push([row, col + 1]);
+        if (updatable([row + 1, col + 1])) changes.push([row + 1, col + 1]);
+        break;
+      case 'red_bot_input':
+        row--;
+      case 'red_top_input':
+        out = calcBlockOut([row, col]);
+        struct[row][col].out = out;
+        struct[row + 1][col].out = out;
+        if (updatable([row, col + 1])) changes.push([row, col + 1]);
+        if (updatable([row + 1, col + 1])) changes.push([row + 1, col + 1]);
+        break;
+      case 'blue_top':
+      case 'blue_bot':
+        struct[row][col].out = calcBlockOut([row, col]);
+      case 'empty':
+        if (updatable([row, col + 1])) changes.push([row, col + 1]);
+        break;
+    }
+  }
+  return changes;
+};
+
+const calcBlockOut = ([row, col]) => {
+  switch (struct[row][col].type) {
+    case 'white_top':
+      return !(struct[row][col - 1].out && struct[row + 1][col - 1].out);
+    case 'white_bot':
+      return !(struct[row][col - 1].out && struct[row - 1][col - 1].out);
+    case 'blue_top':
+    case 'blue_bot':
+      return struct[row][col - 1].out;
+    case 'red_top_input':
+    case 'red_bot_input':
+      return !struct[row][col - 1].out;
+    case 'red_top':
+      return !struct[row + 1][col - 1].out;
+    case 'red_bot':
+      return !struct[row - 1][col - 1].out;
+    default:
+      return struct[row][col].out;
+  }
+};
+
+// Render
+
+const render = () => {
+  struct.forEach((x, row) => x.forEach((_, col) => updateElement([row, col])));
+};
+
+const renderAfterResize = () => {
+  const parent = document.querySelector('#struct');
+  parent.style.setProperty('--rows', struct.length);
+  parent.style.setProperty('--cols', struct[0].length);
+  render();
+  parent.replaceChildren(...struct.flatMap((x) => x.map((block) => block.elm)));
+};
+
+const updateElement = ([row, col]) => {
+  const { type, elm } = struct[row][col];
+  elm.className = '';
+  elm.classList.add('block');
+  switch (type) {
+    case 'empty':
+      if (col !== 0 && struct[row][col - 1].out) elm.classList.add('light');
+      if (col === 0 && struct[row][1].type !== 'empty')
+        elm.classList.add('torch');
+    case 'white_bot':
+    case 'red_bot':
+    case 'red_bot_input':
+    case 'blue_bot':
+      elm.classList.add('empty');
+      break;
+    case 'white_top':
+      elm.classList.add('white');
+      break;
+    case 'red_top':
+      elm.classList.add('flipped');
+    case 'red_top_input':
+      elm.classList.add('red');
+      break;
+    case 'blue_top':
+      elm.classList.add('blue');
+      break;
+  }
+  switch (type) {
+    case 'empty':
+      if (elm.classList.contains('torch') && struct[row][col].out)
+        elm.classList.add('active');
+      break;
+    case 'white_top':
+    case 'red_top':
+    case 'red_top_input':
+    case 'blue_top':
+      if (struct[row][col - 1].out) elm.classList.add('activeTop');
+      if (struct[row + 1][col - 1].out) elm.classList.add('activeBot');
+      break;
+  }
+};
+
+const createElement = () => {
+  const elm = document.createElement('div');
+  return elm;
+};
+
+// Handle Interaction
+
+document.querySelector('#struct').addEventListener('click', (e) => {
+  const elm = e.target;
+  if (!elm.classList.contains('block')) return;
+  let pos = 0;
+  let pointer = elm;
+  while ((pointer = pointer.previousElementSibling)) pos++;
+  const col = pos % struct[0].length;
+  const row = (pos - col) / struct[0].length;
+  const block = struct[row][col];
+  switch (block.type) {
+    case 'empty':
+      if (col === 0 && struct[row][1].type !== 'empty') block.out = !block.out;
+      fastUpdate([row, col]);
+      render();
+      break;
+  }
+});
+
+// Generate table
 
 document
   .querySelector('#generateTable')
@@ -274,92 +303,4 @@ const generateTable = () => {
 const saveFile = (name, content) => {
   console.log('save to', name);
   console.log(content);
-};
-
-// Rendering
-
-const update = (...startBlocks) => {
-  console.log('updating struct from', startBlocks);
-  updateSilently(...startBlocks).forEach(updateElement);
-};
-
-const updateSilently = (...startBlocks) => {
-  for (const block of startBlocks) {
-    switch (block.type) {
-      case 'light':
-        block.out = readOut(block.prev, block.pos[1]);
-        break;
-      case 'white':
-        block.out = !(
-          readOut(block.prevTop, block.pos[1]) &&
-          readOut(block.prevBot, block.pos[1] + 1)
-        );
-        break;
-      case 'red':
-        block.out = !readOut(block.prev, block.pos[1] + block.flipped);
-        break;
-      case 'blue':
-        block.outTop = readOut(block.prevTop, block.pos[1]);
-        block.outBot = readOut(block.prevBot, block.pos[1] + 1);
-    }
-    if (block.next && !block.next.updated) {
-      block.next.updated = true;
-      startBlocks.push(block.next);
-    }
-    if (block.nextTop && !block.nextTop.updated) {
-      block.nextTop.updated = true;
-      startBlocks.push(block.nextTop);
-    }
-    if (block.nextBot && !block.nextBot.updated) {
-      block.nextBot.updated = true;
-      startBlocks.push(block.nextBot);
-    }
-  }
-  for (const block of startBlocks) delete block.updated;
-  return startBlocks;
-};
-
-const createElement = (block) => {
-  const elm = document.createElement('div');
-  block.elm = elm;
-  elm.classList.add('block', block.type);
-  elm.style = `--x: ${block.pos[0]}; --y: ${block.pos[1]}`;
-
-  switch (block.type) {
-    case 'torch':
-      elm.addEventListener('click', () => {
-        block.out = !block.out;
-        update(block);
-      });
-      break;
-    case 'red':
-      if (block.flipped) elm.classList.add('flipped');
-  }
-
-  document.getElementById('struct').appendChild(elm);
-  return elm;
-};
-
-const updateElement = (block) => {
-  const elm = block.elm ? block.elm : createElement(block);
-
-  switch (block.type) {
-    case 'torch':
-    case 'light':
-      if (block.out) elm.classList.add('active');
-      else elm.classList.remove('active');
-      break;
-    case 'white':
-    case 'blue':
-      if (readOut(block.prevTop, block.pos[1])) elm.classList.add('activeTop');
-      else elm.classList.remove('activeTop');
-      if (readOut(block.prevBot, block.pos[1] + 1))
-        elm.classList.add('activeBot');
-      else elm.classList.remove('activeBot');
-      break;
-    case 'red':
-      if (!block.out) elm.classList.add('active');
-      else elm.classList.remove('active');
-      break;
-  }
 };

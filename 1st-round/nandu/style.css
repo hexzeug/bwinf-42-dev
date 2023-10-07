@@ -1,3 +1,8 @@
+:root {
+  --block-size: 30px;
+  --border-size: 1px;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -38,35 +43,26 @@ input[type='file'] {
 }
 
 .struct {
-  position: relative;
-
   min-height: 100%;
+
+  display: grid;
+  grid-template: repeat(var(--rows, 2), var(--block-size)) / repeat(
+      var(--cols, 1),
+      var(--block-size)
+    );
+  gap: var(--border-size);
+
+  justify-content: center;
+  align-content: center;
 }
 
 .block {
-  --size: 30px;
-  --border: 1px;
-
-  width: calc(var(--size) + var(--border));
-  height: calc(var(--size) * 2 + var(--border));
-
-  border: solid var(--border) black;
-  margin: calc(-2 * var(--border));
+  box-sizing: content-box;
+  width: var(--block-size);
+  height: var(--block-size);
 
   display: inline-block;
   position: relative;
-
-  &:is(.struct > *) {
-    position: absolute;
-    top: calc(var(--y, 0) * var(--size));
-    left: calc(var(--x, 0) * var(--size) + 25%);
-
-    transform: translate(-50%, calc(-25% - var(--border) / 4));
-    &.torch,
-    &.light {
-      transform: translate(-50%, -50%);
-    }
-  }
 
   &.white {
     background: linear-gradient(to bottom, #d1d1d1, #fbfbfb, #d1d1d1);
@@ -74,19 +70,6 @@ input[type='file'] {
 
   &.red {
     background: linear-gradient(to bottom, #e63911, #f7a800, #e63911);
-
-    &.active::before,
-    &.active::after {
-      background-color: white;
-    }
-
-    &:not(.flipped)::after {
-      content: none;
-    }
-
-    &.flipped::before {
-      content: none;
-    }
   }
 
   &.blue {
@@ -94,76 +77,63 @@ input[type='file'] {
   }
 
   &.white,
+  &.red,
   &.blue {
+    height: calc(2 * var(--block-size) + var(--border-size));
+
+    border: solid black var(--border-size);
+    margin: calc(-1 * var(--border-size));
+
+    z-index: 1;
+
+    &:is(.struct *) {
+      margin-bottom: calc(-1 * var(--block-size) + -2 * var(--border-size));
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      display: inline-block;
+
+      width: calc(var(--block-size) / 2 - 2 * var(--border-size));
+      height: calc(var(--block-size) / 2 - 2 * var(--border-size));
+
+      border: var(--border-size) solid black;
+      border-radius: 100%;
+      clip-path: inset(0 0 0 calc(var(--block-size) / 4));
+
+      position: absolute;
+      left: calc(-1 * var(--block-size) / 4);
+
+      background-color: black;
+    }
+
+    &::before {
+      top: calc(var(--block-size) / 4);
+    }
+
+    &::after {
+      bottom: calc(var(--block-size) / 4);
+    }
+
+    &.red:not(.flipped)::after,
+    &.red.flipped::before {
+      content: none;
+    }
+
     &.activeTop::before,
     &.activeBot::after {
       background-color: white;
     }
   }
 
-  &.red,
-  &.blue,
-  &.white {
-    &::before,
-    &::after {
-      content: '';
-      display: inline-block;
-
-      width: calc(var(--size) / 2 - 2 * var(--border));
-      height: calc(var(--size) / 2 - 2 * var(--border));
-
-      border: var(--border) solid black;
-      border-radius: 100%;
-      clip-path: inset(0 0 0 calc(var(--size) / 4));
-
-      position: absolute;
-      left: calc(-1 * var(--size) / 4);
-
-      background-color: black;
-    }
-
-    &::before {
-      top: calc(var(--size) / 4);
-    }
-
-    &::after {
-      bottom: calc(var(--size) / 4);
-    }
-  }
-
-  &.torch,
   &.light {
-    height: calc(var(--size) + var(--border));
-
-    &::after {
-      content: '';
-      display: inline-block;
-      position: absolute;
-      top: 0;
-      left: 0;
-
-      width: 75%;
-      height: 100%;
-
-      background: linear-gradient(
-        to right,
-        rgba(0, 0, 0, 10%) 0%,
-        rgba(0, 0, 0, 0) 70%
-      );
-      clip-path: polygon(0% 30%, 100% 20%, 100% 80%, 0% 70%);
-    }
-
-    &.active::after {
-      background: linear-gradient(to right, #e638116b, transparent),
-        linear-gradient(to bottom, #fbc100, #ffe600, #fbc100);
-    }
+    background: linear-gradient(to right, #e638116b, transparent 75%),
+      linear-gradient(to bottom, #fbc100, #ffe600, #fbc100);
+    clip-path: polygon(0% 30%, 75% 20%, 75% 80%, 0% 70%);
   }
 
   &.torch {
     background: white;
-  }
-
-  &.light {
-    border: none;
   }
 }
