@@ -9,9 +9,9 @@ const fileMeta = {
   name: null,
 };
 const tableAnimation = {
-  interval: null,
+  timer: null,
   get running() {
-    return Boolean(this.interval);
+    return Boolean(this.timer);
   },
 };
 
@@ -356,10 +356,11 @@ const generateTable = async () => {
     if (animate) {
       render();
       let res;
-      tableAnimation.interval = setTimeout(() => res(), 1000 / FPS);
+      tableAnimation.timer = setTimeout(() => res(), 1000 / FPS);
       await new Promise((r) => (res = r));
     }
   }
+  if (animate) tableAnimation.timer = null;
   const inHeader = new Array(inSize)
     .fill(null)
     .map((_, i) => ('Q' + (i + 1)).padEnd(inWidth))
