@@ -319,6 +319,7 @@ const handleStructInteraction = async (e) => {
         if (e.altKey) editStruct('insert', [row, col], 'blue_top');
         break;
       }
+      // end temporary
       if (isTorch([row, col])) {
         editStruct('torch', [row, col]);
       }
@@ -333,6 +334,9 @@ const handleStructInteraction = async (e) => {
         await sleep(200, (cancel) => (block.mousedown = cancel));
         delete block.mousedown;
         editStruct('delete', [row, col]);
+        // todo start drag
+        // todo move shrik call to drop
+        editStruct('shrink');
       }
       break;
     case 'mouseup':
@@ -349,7 +353,7 @@ structElm.addEventListener('dblclick', handleStructInteraction);
 structElm.addEventListener('mousedown', handleStructInteraction);
 structElm.addEventListener('mouseup', handleStructInteraction);
 
-const editStruct = (operation, [row, col], type = null) => {
+const editStruct = (operation, [row, col] = [0, 0], type = null) => {
   const block = struct[row][col];
   const blockBot = struct[row + 1][col];
   let resized = false;
@@ -377,7 +381,6 @@ const editStruct = (operation, [row, col], type = null) => {
       delete struct[row + 1][col + 1]?.output;
       delete struct[row][col - 1]?.input;
       delete struct[row + 1][col - 1]?.input;
-      // todo check for resize
       break;
     case 'insert':
       delete block.input;
@@ -399,20 +402,55 @@ const editStruct = (operation, [row, col], type = null) => {
           blockBot.type = 'blue_bot';
           break;
       }
-      const top = Math.max(0, 2 - row);
-      const bottom = Math.max(0, 4 + row - struct.length);
-      const left = Math.max(0, 1 - col);
-      const right = Math.max(0, 2 + col - struct[0].length);
-      if (top + bottom + left + right > 0) {
-        row += top;
-        col += left;
+      {
+        const top = Math.max(0, 2 - row);
+        const bottom = Math.max(0, 4 + row - struct.length);
+        const left = Math.max(0, 1 - col);
+        const right = Math.max(0, 2 + col - struct[0].length);
+        if (top + bottom + left + right > 0) {
+          row += top;
+          col += left;
+          resized = true;
+          resizeStruct(top, bottom, left, right);
+        }
+      }
+      break;
+    case 'shrink': {
+      const top = Math.min(
+        0,
+        2 - struct.findIndex((x) => x.some((block) => block.type !== 'empty'))
+      );
+      const bottom = Math.min(
+        0,
+        3 +
+          struct.findLastIndex((x) =>
+            x.some((block) => block.type !== 'empty')
+          ) -
+          struct.length
+      );
+      const left = Math.min(
+        0,
+        1 -
+          struct[0].findIndex((_, col) =>
+            struct.some((x) => x[col].type !== 'empty')
+          )
+      );
+      const right = Math.min(
+        0,
+        2 +
+          struct[0].findLastIndex((_, col) =>
+            struct.some((x) => x[col].type !== 'empty')
+          ) -
+          struct[0].length
+      );
+      if (top + bottom + left + right < 0) {
         resized = true;
         resizeStruct(top, bottom, left, right);
       }
-      break;
+    }
   }
   fileMeta.saved = false;
-  fastUpdate([row, col], [row + 1, col]);
+  if (operation !== 'shrink') fastUpdate([row, col], [row + 1, col]);
   if (resized) {
     renderAfterResize();
   } else {
