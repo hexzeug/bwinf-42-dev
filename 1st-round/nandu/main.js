@@ -11,6 +11,11 @@ const fileMeta = {
 const tableAnimation = {
   running: false,
 };
+const drag = {
+  type: null,
+  origin: null,
+  target: null,
+};
 
 // Utils
 
@@ -241,7 +246,7 @@ const renderAfterResize = () => {
   const elms = [];
   struct.forEach((x, row) =>
     x.forEach((block, col) => {
-      if (!block.elm) block.elm = createElement();
+      if (!block.elm) block.elm = document.createElement('div');
       updateElement([row, col]);
       elms.push(block.elm);
     })
@@ -249,19 +254,32 @@ const renderAfterResize = () => {
   parent.replaceChildren(...elms);
 };
 
-const createElement = () => {
-  const elm = document.createElement('div');
-  return elm;
-};
-
 const updateElement = ([row, col]) => {
   const { type, elm } = struct[row][col];
   elm.className = '';
   elm.classList.add('block');
+  setBlockTypeOnElement(elm, type);
   switch (type) {
     case 'empty':
       if (col !== 0 && struct[row][col - 1].out) elm.classList.add('light');
-      if (isTorch([row, col])) elm.classList.add('torch');
+      if (isTorch([row, col])) {
+        elm.classList.add('torch');
+        if (struct[row][col].out) elm.classList.add('active');
+      }
+      break;
+    case 'white_top':
+    case 'red_top':
+    case 'red_top_input':
+    case 'blue_top':
+      if (struct[row][col - 1].out) elm.classList.add('activeTop');
+      if (struct[row + 1][col - 1].out) elm.classList.add('activeBot');
+      break;
+  }
+};
+
+const setBlockTypeOnElement = (elm, type) => {
+  switch (type) {
+    case 'empty':
     case 'white_bot':
     case 'red_bot':
     case 'red_bot_input':
@@ -280,19 +298,6 @@ const updateElement = ([row, col]) => {
       elm.classList.add('blue');
       break;
   }
-  switch (type) {
-    case 'empty':
-      if (elm.classList.contains('torch') && struct[row][col].out)
-        elm.classList.add('active');
-      break;
-    case 'white_top':
-    case 'red_top':
-    case 'red_top_input':
-    case 'blue_top':
-      if (struct[row][col - 1].out) elm.classList.add('activeTop');
-      if (struct[row + 1][col - 1].out) elm.classList.add('activeBot');
-      break;
-  }
 };
 
 // Edit
@@ -307,19 +312,6 @@ const handleStructInteraction = async (e) => {
   const block = struct[row][col];
   switch (e.type) {
     case 'click':
-      // todo temporary
-      if (
-        block.type === 'empty' &&
-        struct.length > row + 1 &&
-        struct[row + 1][col].type === 'empty' &&
-        e.shiftKey + e.ctrlKey + e.altKey === 1
-      ) {
-        if (e.shiftKey) editStruct('insert_shrink', [row, col], 'white_top');
-        if (e.ctrlKey) editStruct('insert_shrink', [row, col], 'red_top_input');
-        if (e.altKey) editStruct('insert', [row, col], 'blue_top');
-        break;
-      }
-      // end temporary
       if (isTorch([row, col])) {
         editStruct('torch', [row, col]);
       }
@@ -333,10 +325,8 @@ const handleStructInteraction = async (e) => {
       if (block.type !== 'empty') {
         await sleep(200, (cancel) => (block.mousedown = cancel));
         delete block.mousedown;
-        const shrink = block.type === 'blue_top';
-        editStruct('delete', [row, col]);
-        // todo start drag
-        if (shrink) editStruct('shrink');
+
+        startDrag([row, col]);
       }
       break;
     case 'mouseup':
@@ -347,11 +337,109 @@ const handleStructInteraction = async (e) => {
       break;
   }
 };
-
 structElm.addEventListener('click', handleStructInteraction);
 structElm.addEventListener('dblclick', handleStructInteraction);
 structElm.addEventListener('mousedown', handleStructInteraction);
 structElm.addEventListener('mouseup', handleStructInteraction);
+
+const handleDragInteraction = (e) => {
+  if (!drag.type) return;
+  switch (e.type) {
+    case 'mousemove':
+      moveDrag(e.x, e.y);
+      break;
+    case 'mouseup':
+      stopDrag();
+      break;
+  }
+};
+document.addEventListener('mousemove', handleDragInteraction);
+document.addEventListener('mouseup', handleDragInteraction);
+
+document.addEventListener('dragstart', (e) => e.preventDefault());
+
+document
+  .querySelector('#whiteEditor')
+  .addEventListener('mousedown', () => startDrag('white_top'));
+document
+  .querySelector('#redEditor')
+  .addEventListener('mousedown', (e) =>
+    startDrag(e.shiftKey ? 'red_top' : 'red_top_input')
+  );
+// todo flip aswell if mouse doesnt move
+document
+  .querySelector('#redEditor')
+  .addEventListener('mousemove', (e) =>
+    e.target.classList.toggle('flipped', e.shiftKey)
+  );
+document
+  .querySelector('#redEditor')
+  .addEventListener('mouseleave', (e) => e.target.classList.remove('flipped'));
+document
+  .querySelector('#blueEditor')
+  .addEventListener('mousedown', () => startDrag('blue_top'));
+
+const startDrag = (from) => {
+  if (drag.type) return;
+  if (Array.isArray(from)) {
+    const [row, col] = from;
+    drag.type = struct[row][col].type;
+    drag.origin = from;
+    drag.target = from;
+    editStruct('delete', from);
+  } else {
+    drag.type = from;
+    drag.origin = null;
+    drag.target = null;
+  }
+  drag.elm = document.createElement('div');
+  drag.elm.classList.add('block', 'hover');
+  setBlockTypeOnElement(drag.elm, drag.type);
+  document.querySelector('#drag').replaceChildren(drag.elm);
+  // todo moveDrag() to current position
+};
+
+const moveDrag = (x, y) => {
+  const size = drag.elm.clientWidth;
+  const elm = document.elementFromPoint(x, y - size / 2);
+  if (elm.parentElement.id === 'struct' && elm.classList.contains('block')) {
+    const [row, col] = getBlockPosOfElm(elm);
+    if (
+      row + 1 < struct.length &&
+      struct[row][col].type === 'empty' &&
+      struct[row + 1][col].type === 'empty'
+    ) {
+      drag.target = [row, col];
+    } else {
+      drag.target = null;
+    }
+  } else {
+    drag.target = null;
+  }
+  if (drag.target) {
+    const [row, col] = drag.target;
+    const { x, y } = struct[row][col].elm.getBoundingClientRect();
+    drag.elm.style.left = x + 'px';
+    drag.elm.style.top = y + 'px';
+  } else {
+    drag.elm.style.left = x - size / 2 + 'px';
+    drag.elm.style.top = y - size + 'px';
+  }
+  // todo change cursor according to action
+};
+
+const stopDrag = () => {
+  if (drag.target) {
+    editStruct('insert_shrink', drag.target, drag.type);
+  } else if (drag.origin) {
+    editStruct('shrink');
+  }
+  drag.type = null;
+  drag.origin = null;
+  drag.target = null;
+  delete drag.elm;
+  document.querySelector('#drag').replaceChildren();
+};
 
 const editStruct = (operation, [row, col] = [0, 0], type = null) => {
   const block = struct[row][col];
