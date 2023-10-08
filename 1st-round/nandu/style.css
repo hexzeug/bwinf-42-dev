@@ -210,14 +210,14 @@ button {
   &.light {
     background: linear-gradient(to right, #e638116b, transparent 75%),
       linear-gradient(to bottom, #fbc100, #ffe600, #fbc100);
-    clip-path: polygon(0% 30%, 75% 20%, 75% 80%, 0% 70%);
+    clip-path: polygon(0% 24%, 72% 15%, 72% 85%, 0% 76%);
   }
 
   &.torch {
-    background: white;
+    background: url('assets/torch.svg');
 
     &.active {
-      background: orange;
+      background: url('assets/torch_active.svg');
     }
   }
 }
