@@ -73,12 +73,7 @@ const importStruct = async (file) => {
   fileMeta.saved = true;
   fileMeta.name = file.name.replace(/\.txt$/, '');
 
-  struct.length = w + 4;
-  for (let i = 0; i < struct.length; i++)
-    struct[i] = Array.from({ length: h }, () => ({
-      type: 'empty',
-      out: false,
-    }));
+  clearStruct(w + 4, h);
 
   tokens.forEach((line, i) => {
     for (let j = 0; j < line.length; j++) {
@@ -312,22 +307,20 @@ const handleStructInteraction = async (e) => {
   const block = struct[row][col];
   switch (e.type) {
     case 'click':
-      if (isTorch([row, col])) {
-        editStruct('torch', [row, col]);
-      }
       // todo temporary
       if (
         block.type === 'empty' &&
         struct.length > row + 1 &&
-        struct[row + 1][col].type === 'empty'
+        struct[row + 1][col].type === 'empty' &&
+        e.shiftKey + e.ctrlKey + e.altKey === 1
       ) {
-        if (e.shiftKey) {
-          editStruct('insert', [row, col], 'white_top');
-        } else if (e.ctrlKey) {
-          editStruct('insert', [row, col], 'red_top');
-        } else if (e.altKey) {
-          editStruct('insert', [row, col], 'blue_top');
-        }
+        if (e.shiftKey) editStruct('insert', [row, col], 'white_top');
+        if (e.ctrlKey) editStruct('insert', [row, col], 'red_top_input');
+        if (e.altKey) editStruct('insert', [row, col], 'blue_top');
+        break;
+      }
+      if (isTorch([row, col])) {
+        editStruct('torch', [row, col]);
       }
       break;
     case 'dblclick':
@@ -359,10 +352,13 @@ structElm.addEventListener('mouseup', handleStructInteraction);
 const editStruct = (operation, [row, col], type = null) => {
   const block = struct[row][col];
   const blockBot = struct[row + 1][col];
+  let resized = false;
   switch (operation) {
     case 'torch':
       block.out = !block.out;
-      break;
+      fastUpdate([row, col]);
+      render();
+      return;
     case 'flip':
       if (block.type === 'red_top') {
         block.type = 'red_top_input';
@@ -403,16 +399,62 @@ const editStruct = (operation, [row, col], type = null) => {
           blockBot.type = 'blue_bot';
           break;
       }
-      // todo check for resize
+      const top = Math.max(0, 2 - row);
+      const bottom = Math.max(0, 4 + row - struct.length);
+      const left = Math.max(0, 1 - col);
+      const right = Math.max(0, 2 + col - struct[0].length);
+      if (top + bottom + left + right > 0) {
+        row += top;
+        col += left;
+        resized = true;
+        resizeStruct(top, bottom, left, right);
+      }
       break;
   }
-  if (operation === 'torch') {
-    fastUpdate([row, col]);
+  fileMeta.saved = false;
+  fastUpdate([row, col], [row + 1, col]);
+  if (resized) {
+    renderAfterResize();
   } else {
-    fileMeta.saved = false;
-    fastUpdate([row, col], [row + 1, col]);
+    render();
   }
-  render();
+};
+
+const clearStruct = (rows, cols) => {
+  struct.length = rows;
+  for (let i = 0; i < rows; i++) {
+    struct[i] = new Array(cols).fill(null).map(createBlock);
+  }
+};
+
+const resizeStruct = (top, bottom, left, right) => {
+  struct.forEach((x) => {
+    x.splice(
+      0,
+      -left,
+      ...new Array(Math.max(0, left)).fill(null).map(createBlock)
+    );
+    x.splice(
+      x.length + right,
+      Infinity,
+      ...new Array(Math.max(0, right)).fill(null).map(createBlock)
+    );
+  });
+  const cols = struct[0].length;
+  struct.splice(
+    0,
+    -top,
+    ...new Array(Math.max(0, top))
+      .fill(null)
+      .map(() => new Array(cols).fill(null).map(createBlock))
+  );
+  struct.splice(
+    struct.length + bottom,
+    Infinity,
+    ...new Array(Math.max(0, bottom))
+      .fill(null)
+      .map(() => new Array(cols).fill(null).map(createBlock))
+  );
 };
 
 // Edit utils
@@ -431,6 +473,8 @@ const isTorch = ([row, col]) =>
   struct[row][0].type === 'empty' &&
   struct[0].length > 1 &&
   struct[row][1].type !== 'empty';
+
+const createBlock = () => ({ type: 'empty', out: false });
 
 // Generate table
 
