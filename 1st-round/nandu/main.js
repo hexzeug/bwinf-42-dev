@@ -314,8 +314,8 @@ const handleStructInteraction = async (e) => {
         struct[row + 1][col].type === 'empty' &&
         e.shiftKey + e.ctrlKey + e.altKey === 1
       ) {
-        if (e.shiftKey) editStruct('insert', [row, col], 'white_top');
-        if (e.ctrlKey) editStruct('insert', [row, col], 'red_top_input');
+        if (e.shiftKey) editStruct('insert_shrink', [row, col], 'white_top');
+        if (e.ctrlKey) editStruct('insert_shrink', [row, col], 'red_top_input');
         if (e.altKey) editStruct('insert', [row, col], 'blue_top');
         break;
       }
@@ -333,10 +333,10 @@ const handleStructInteraction = async (e) => {
       if (block.type !== 'empty') {
         await sleep(200, (cancel) => (block.mousedown = cancel));
         delete block.mousedown;
+        const shrink = block.type === 'blue_top';
         editStruct('delete', [row, col]);
         // todo start drag
-        // todo move shrik call to drop
-        editStruct('shrink');
+        if (shrink) editStruct('shrink');
       }
       break;
     case 'mouseup':
@@ -383,6 +383,7 @@ const editStruct = (operation, [row, col] = [0, 0], type = null) => {
       delete struct[row + 1][col - 1]?.input;
       break;
     case 'insert':
+    case 'insert_shrink':
       delete block.input;
       delete block.output;
       delete blockBot.input;
@@ -402,52 +403,50 @@ const editStruct = (operation, [row, col] = [0, 0], type = null) => {
           blockBot.type = 'blue_bot';
           break;
       }
-      {
+      if (operation === 'insert') {
         const top = Math.max(0, 2 - row);
         const bottom = Math.max(0, 4 + row - struct.length);
         const left = Math.max(0, 1 - col);
         const right = Math.max(0, 2 + col - struct[0].length);
-        if (top + bottom + left + right > 0) {
-          row += top;
-          col += left;
-          resized = true;
-          resizeStruct(top, bottom, left, right);
-        }
+        row += top;
+        col += left;
+        resized = top + bottom + left + right > 0;
+        if (resized) resizeStruct(top, bottom, left, right);
+        break;
       }
-      break;
-    case 'shrink': {
-      const top = Math.min(
-        0,
-        2 - struct.findIndex((x) => x.some((block) => block.type !== 'empty'))
-      );
-      const bottom = Math.min(
-        0,
-        3 +
+    case 'shrink':
+      {
+        const empty = struct.every((x) =>
+          x.every((block) => block.type === 'empty')
+        );
+        const top = empty
+          ? 0
+          : 2 -
+            struct.findIndex((x) => x.some((block) => block.type !== 'empty'));
+        const bottom =
+          3 +
           struct.findLastIndex((x) =>
             x.some((block) => block.type !== 'empty')
           ) -
-          struct.length
-      );
-      const left = Math.min(
-        0,
-        1 -
-          struct[0].findIndex((_, col) =>
-            struct.some((x) => x[col].type !== 'empty')
-          )
-      );
-      const right = Math.min(
-        0,
-        2 +
+          struct.length;
+        const left = empty
+          ? 0
+          : 1 -
+            struct[0].findIndex((_, col) =>
+              struct.some((x) => x[col].type !== 'empty')
+            );
+        const right =
+          2 +
           struct[0].findLastIndex((_, col) =>
             struct.some((x) => x[col].type !== 'empty')
           ) -
-          struct[0].length
-      );
-      if (top + bottom + left + right < 0) {
-        resized = true;
-        resizeStruct(top, bottom, left, right);
+          struct[0].length;
+        row += top;
+        col += left;
+        resized = (top | bottom | left | right) !== 0;
+        if (resized) resizeStruct(top, bottom, left, right);
       }
-    }
+      break;
   }
   fileMeta.saved = false;
   if (operation !== 'shrink') fastUpdate([row, col], [row + 1, col]);
