@@ -368,7 +368,7 @@ const generateTable = async () => {
     .fill(null)
     .map((_, i) => ('L' + (i + 1)).padEnd(outWidth))
     .join(SP);
-  const table = inHeader + SEP + outHeader + NL + lines.join(NL);
+  const table = inHeader + SEP + outHeader + NL + lines.join(NL) + NL;
   saveFile(generateName() + '_table', table);
 };
 
