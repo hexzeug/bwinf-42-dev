@@ -9,10 +9,16 @@ const fileMeta = {
   name: null,
 };
 const tableAnimation = {
-  timer: null,
-  get running() {
-    return Boolean(this.timer);
-  },
+  running: false,
+};
+
+// Utils
+
+const sleep = (time, cancel = new Function()) => {
+  return new Promise((r) => {
+    const id = setTimeout(r, time);
+    cancel(() => clearTimeout(id));
+  });
 };
 
 // Import
@@ -260,8 +266,7 @@ const updateElement = ([row, col]) => {
   switch (type) {
     case 'empty':
       if (col !== 0 && struct[row][col - 1].out) elm.classList.add('light');
-      if (col === 0 && struct[0].length > 1 && struct[row][1].type !== 'empty')
-        elm.classList.add('torch');
+      if (isTorch([row, col])) elm.classList.add('torch');
     case 'white_bot':
     case 'red_bot':
     case 'red_bot_input':
@@ -295,31 +300,137 @@ const updateElement = ([row, col]) => {
   }
 };
 
-// Handle Interaction
+// Edit
 
-document.querySelector('#struct').addEventListener('click', (e) => {
+const structElm = document.querySelector('#struct');
+
+const handleStructInteraction = async (e) => {
+  if (tableAnimation.running) return;
   const elm = e.target;
   if (!elm.classList.contains('block')) return;
+  const [row, col] = getBlockPosOfElm(elm);
+  const block = struct[row][col];
+  switch (e.type) {
+    case 'click':
+      if (isTorch([row, col])) {
+        editStruct('torch', [row, col]);
+      }
+      // todo temporary
+      if (
+        block.type === 'empty' &&
+        struct.length > row + 1 &&
+        struct[row + 1][col].type === 'empty'
+      ) {
+        if (e.shiftKey) {
+          editStruct('insert', [row, col], 'white_top');
+        } else if (e.ctrlKey) {
+          editStruct('insert', [row, col], 'red_top');
+        } else if (e.altKey) {
+          editStruct('insert', [row, col], 'blue_top');
+        }
+      }
+      break;
+    case 'dblclick':
+      if (['red_top', 'red_top_input'].includes(block.type)) {
+        editStruct('flip', [row, col]);
+      }
+      break;
+    case 'mousedown':
+      if (block.type !== 'empty') {
+        await sleep(200, (cancel) => (block.mousedown = cancel));
+        delete block.mousedown;
+        editStruct('delete', [row, col]);
+      }
+      break;
+    case 'mouseup':
+      if (block.mousedown) {
+        block.mousedown();
+        delete block.mousedown;
+      }
+      break;
+  }
+};
+
+structElm.addEventListener('click', handleStructInteraction);
+structElm.addEventListener('dblclick', handleStructInteraction);
+structElm.addEventListener('mousedown', handleStructInteraction);
+structElm.addEventListener('mouseup', handleStructInteraction);
+
+const editStruct = (operation, [row, col], type = null) => {
+  const block = struct[row][col];
+  const blockBot = struct[row + 1][col];
+  switch (operation) {
+    case 'torch':
+      block.out = !block.out;
+      break;
+    case 'flip':
+      if (block.type === 'red_top') {
+        block.type = 'red_top_input';
+        blockBot.type = 'red_bot';
+      } else {
+        block.type = 'red_top';
+        blockBot.type = 'red_bot_input';
+      }
+      break;
+    case 'delete':
+      block.type = 'empty';
+      block.out = false;
+      blockBot.type = 'empty';
+      blockBot.out = false;
+      delete struct[row][col + 1]?.output;
+      delete struct[row + 1][col + 1]?.output;
+      delete struct[row][col - 1]?.input;
+      delete struct[row + 1][col - 1]?.input;
+      // todo check for resize
+      break;
+    case 'insert':
+      delete block.input;
+      delete block.output;
+      delete blockBot.input;
+      delete blockBot.output;
+      block.type = type;
+      switch (type) {
+        case 'white_top':
+          blockBot.type = 'white_bot';
+          break;
+        case 'red_top':
+          blockBot.type = 'red_bot_input';
+          break;
+        case 'red_top_input':
+          blockBot.type = 'red_bot';
+          break;
+        case 'blue_top':
+          blockBot.type = 'blue_bot';
+          break;
+      }
+      // todo check for resize
+      break;
+  }
+  if (operation === 'torch') {
+    fastUpdate([row, col]);
+  } else {
+    fileMeta.saved = false;
+    fastUpdate([row, col], [row + 1, col]);
+  }
+  render();
+};
+
+// Edit utils
+
+const getBlockPosOfElm = (elm) => {
   let pos = 0;
   let pointer = elm;
   while ((pointer = pointer.previousElementSibling)) pos++;
   const col = pos % struct[0].length;
   const row = (pos - col) / struct[0].length;
-  const block = struct[row][col];
-  switch (block.type) {
-    case 'empty':
-      if (
-        !tableAnimation.running &&
-        col === 0 &&
-        struct[row][1].type !== 'empty'
-      ) {
-        block.out = !block.out;
-        fastUpdate([row, col]);
-        render();
-      }
-      break;
-  }
-});
+  return [row, col];
+};
+
+const isTorch = ([row, col]) =>
+  col === 0 &&
+  struct[row][0].type === 'empty' &&
+  struct[0].length > 1 &&
+  struct[row][1].type !== 'empty';
 
 // Generate table
 
@@ -341,6 +452,7 @@ const generateTable = async () => {
   const lines = [];
   let inWidth, outWidth;
   let inSize, outSize;
+  if (animate) tableAnimation.running = true;
   for (const [i, inputs, outputs] of inputIterator()) {
     if (!inSize) inSize = inputs.length;
     if (!outSize) outSize = outputs.length;
@@ -355,12 +467,10 @@ const generateTable = async () => {
     lines[i] = inText + SEP + outText;
     if (animate) {
       render();
-      let res;
-      tableAnimation.timer = setTimeout(() => res(), 1000 / FPS);
-      await new Promise((r) => (res = r));
+      await sleep(1000 / FPS);
     }
   }
-  if (animate) tableAnimation.timer = null;
+  if (animate) tableAnimation.running = false;
   const inHeader = new Array(inSize)
     .fill(null)
     .map((_, i) => ('Q' + (i + 1)).padEnd(inWidth))
