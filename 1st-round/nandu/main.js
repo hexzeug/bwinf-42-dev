@@ -1,9 +1,6 @@
 // Global variables
 
-const struct = [
-  [{ type: 'empty', out: false }],
-  [{ type: 'empty', out: false }],
-];
+const struct = [];
 const fileMeta = {
   saved: true,
   name: null,
@@ -155,7 +152,8 @@ const exportStruct = () => {
     });
     text += NL;
   });
-  saveFile(generateName(), text);
+  saveFile(fileMetaName(), text);
+  fileMetaExport();
 };
 
 // Update
@@ -572,7 +570,7 @@ const editStruct = (operation, [row, col] = [0, 0], type = null) => {
       }
       break;
   }
-  fileMeta.saved = false;
+  fileMetaEdit();
   if (operation !== 'shrink') fastUpdate([row, col], [row + 1, col]);
   if (resized) {
     renderAfterResize();
@@ -593,8 +591,7 @@ const clearStruct = (rows, cols, name = 'nandu') => {
     return false;
   }
 
-  fileMeta.saved = true;
-  fileMeta.name = name;
+  fileMetaLoad(name);
 
   struct.length = rows;
   for (let i = 0; i < rows; i++) {
@@ -701,7 +698,7 @@ const generateTable = async () => {
     .map((_, i) => ('L' + (i + 1)).padEnd(outWidth))
     .join(SP);
   const table = inHeader + SEP + outHeader + NL + lines.join(NL) + NL;
-  saveFile(generateName() + '_table', table);
+  saveFile(`${fileMetaName()}_table`, table);
 };
 
 const inputIterator = function* () {
@@ -746,12 +743,27 @@ const saveFile = (name, content) => {
   URL.revokeObjectURL(url);
 };
 
-const generateName = () => {
-  if (!fileMeta.name) return 'nandu';
-  if (fileMeta.saved) return fileMeta.name;
-  return fileMeta.name + '(modified)';
+const fileMetaEdit = () => {
+  fileMeta.saved = false;
+};
+
+const fileMetaLoad = (name) => {
+  fileMeta.saved = true;
+  fileMeta.name = name;
+  document.querySelector('#name').value = name;
+};
+
+document.querySelector('#name').addEventListener('change', (e) => {
+  fileMeta.name = e.target.value;
+});
+
+const fileMetaName = () => (fileMeta.name.length > 0 ? fileMeta.name : 'nandu');
+
+const fileMetaExport = () => {
+  fileMeta.saved = true;
 };
 
 // Load inital page
 
+clearStruct(2, 1);
 renderAfterResize();

@@ -20,7 +20,8 @@ input[type='checkbox'] {
   display: none;
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -61,6 +62,20 @@ button {
 
   &:active {
     background-color: #e0e0e0;
+  }
+}
+
+.text {
+  border: none;
+  padding: 0.5em 1em;
+  outline: none;
+
+  background: none;
+
+  text-align: center;
+
+  &:focus {
+    background-color: #00000015;
   }
 }
 
