@@ -307,9 +307,7 @@ const handleStructInteraction = async (e) => {
       if (isTorch([row, col])) {
         editStruct('torch', [row, col]);
       }
-      break;
-    case 'dblclick':
-      if (['red_top', 'red_top_input'].includes(block.type)) {
+      if (e.shiftKey && ['red_top', 'red_top_input'].includes(block.type)) {
         editStruct('flip', [row, col]);
       }
       break;
@@ -330,7 +328,6 @@ const handleStructInteraction = async (e) => {
   }
 };
 structElm.addEventListener('click', handleStructInteraction);
-structElm.addEventListener('dblclick', handleStructInteraction);
 structElm.addEventListener('mousedown', handleStructInteraction);
 structElm.addEventListener('mouseup', handleStructInteraction);
 
@@ -361,21 +358,11 @@ document
   .addEventListener('mousedown', (e) => startDrag('blue_top', e));
 
 const handleDragShift = (e) => {
-  let shift;
-  switch (e.type) {
-    case 'keydown':
-      if (e.key !== 'Shift' || e.repeat) return;
-      shift = true;
-      break;
-    case 'keyup':
-      if (e.key !== 'Shift') return;
-      shift = false;
-      break;
-  }
+  if (e.key !== 'Shift') return;
   if (drag.type === 'red_top_input') {
-    drag.elm.classList.toggle('flipped', shift);
+    drag.elm.classList.toggle('flipped', e.type === 'keydown');
   } else if (drag.type === 'red_top') {
-    drag.elm.classList.toggle('flipped', !shift);
+    drag.elm.classList.toggle('flipped', e.type === 'keyup');
   }
 };
 document.addEventListener('keydown', handleDragShift);
@@ -402,8 +389,10 @@ const startDrag = (from, { x, y }) => {
 };
 
 const moveDrag = ({ x, y }) => {
-  const size = drag.elm.clientWidth;
-  const elm = document.elementFromPoint(x, y - size / 2);
+  const SIZE = drag.elm.clientWidth;
+  const MAX_DIST = 10 * SIZE;
+
+  const elm = document.elementFromPoint(x, y - SIZE / 2);
   if (elm.parentElement.id === 'struct' && elm.classList.contains('block')) {
     const [row, col] = getBlockPosOfElm(elm);
     if (
@@ -416,7 +405,32 @@ const moveDrag = ({ x, y }) => {
       drag.target = null;
     }
   } else {
-    drag.target = null;
+    let min = Infinity;
+    let blockPos;
+    struct
+      .flatMap((x, row) => {
+        if (row + 1 === struct.length) {
+          return [];
+        } else if (row === 0 || row + 2 === struct.length) {
+          return x.map((_, col) => [row, col]);
+        } else {
+          return [
+            [row, 0],
+            [row, x.length - 1],
+          ];
+        }
+      })
+      .forEach(([row, col]) => {
+        const { x: blockX, y: blockY } =
+          struct[row][col].elm.getBoundingClientRect();
+        const dist =
+          (x - blockX - SIZE / 2) ** 2 + (y - blockY - SIZE / 2) ** 2;
+        if (dist < min) {
+          min = dist;
+          blockPos = [row, col];
+        }
+      });
+    drag.target = min < MAX_DIST ** 2 ? blockPos : null;
   }
   if (drag.target) {
     const [row, col] = drag.target;
@@ -425,8 +439,8 @@ const moveDrag = ({ x, y }) => {
     drag.elm.style.top = y + 'px';
     document.body.style.cursor = 'grab';
   } else {
-    drag.elm.style.left = x - size / 2 + 'px';
-    drag.elm.style.top = y - size + 'px';
+    drag.elm.style.left = x - SIZE / 2 + 'px';
+    drag.elm.style.top = y - SIZE + 'px';
     document.body.style.cursor = 'grabbing';
   }
 };
