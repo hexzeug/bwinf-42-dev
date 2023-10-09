@@ -292,8 +292,6 @@ const setBlockTypeOnElement = (elm, type) => {
 
 // Edit
 
-const structElm = document.querySelector('#struct');
-
 const handleStructInteraction = async (e) => {
   if (tableAnimation.running) return;
   const elm = e.target;
@@ -318,6 +316,7 @@ const handleStructInteraction = async (e) => {
       }
       break;
     case 'mouseup':
+      //todo doesnt register mouseup outside of block, resulting in drag start with mouse released
       if (block.mousedown) {
         block.mousedown();
         delete block.mousedown;
@@ -325,9 +324,15 @@ const handleStructInteraction = async (e) => {
       break;
   }
 };
-structElm.addEventListener('click', handleStructInteraction);
-structElm.addEventListener('mousedown', handleStructInteraction);
-structElm.addEventListener('mouseup', handleStructInteraction);
+document
+  .querySelector('#struct')
+  .addEventListener('click', handleStructInteraction);
+document
+  .querySelector('#struct')
+  .addEventListener('mousedown', handleStructInteraction);
+document
+  .querySelector('#struct')
+  .addEventListener('mouseup', handleStructInteraction);
 
 const handleDragInteraction = (e) => {
   if (!drag.type) return;
