@@ -67,18 +67,10 @@ const importStruct = async (file) => {
     });
   });
 
-  if (
-    !fileMeta.saved &&
-    !confirm("You haven't saved the current struct.\nThis will override it.")
-  ) {
+  if (!clearStruct(w + 4, h, file.name.replace(/\.txt$/, ''))) {
     console.log('canceled import');
     return;
   }
-
-  fileMeta.saved = true;
-  fileMeta.name = file.name.replace(/\.txt$/, '');
-
-  clearStruct(w + 4, h);
 
   tokens.forEach((line, i) => {
     for (let j = 0; j < line.length; j++) {
@@ -326,7 +318,7 @@ const handleStructInteraction = async (e) => {
         await sleep(200, (cancel) => (block.mousedown = cancel));
         delete block.mousedown;
 
-        startDrag([row, col]);
+        startDrag([row, col], e);
       }
       break;
     case 'mouseup':
@@ -346,10 +338,10 @@ const handleDragInteraction = (e) => {
   if (!drag.type) return;
   switch (e.type) {
     case 'mousemove':
-      moveDrag(e.x, e.y);
+      moveDrag(e);
       break;
     case 'mouseup':
-      stopDrag();
+      stopDrag(e);
       break;
   }
 };
@@ -360,26 +352,36 @@ document.addEventListener('dragstart', (e) => e.preventDefault());
 
 document
   .querySelector('#whiteEditor')
-  .addEventListener('mousedown', () => startDrag('white_top'));
+  .addEventListener('mousedown', (e) => startDrag('white_top', e));
 document
   .querySelector('#redEditor')
-  .addEventListener('mousedown', (e) =>
-    startDrag(e.shiftKey ? 'red_top' : 'red_top_input')
-  );
-// todo flip aswell if mouse doesnt move
-document
-  .querySelector('#redEditor')
-  .addEventListener('mousemove', (e) =>
-    e.target.classList.toggle('flipped', e.shiftKey)
-  );
-document
-  .querySelector('#redEditor')
-  .addEventListener('mouseleave', (e) => e.target.classList.remove('flipped'));
+  .addEventListener('mousedown', (e) => startDrag('red_top_input', e));
 document
   .querySelector('#blueEditor')
-  .addEventListener('mousedown', () => startDrag('blue_top'));
+  .addEventListener('mousedown', (e) => startDrag('blue_top', e));
 
-const startDrag = (from) => {
+const handleDragShift = (e) => {
+  let shift;
+  switch (e.type) {
+    case 'keydown':
+      if (e.key !== 'Shift' || e.repeat) return;
+      shift = true;
+      break;
+    case 'keyup':
+      if (e.key !== 'Shift') return;
+      shift = false;
+      break;
+  }
+  if (drag.type === 'red_top_input') {
+    drag.elm.classList.toggle('flipped', shift);
+  } else if (drag.type === 'red_top') {
+    drag.elm.classList.toggle('flipped', !shift);
+  }
+};
+document.addEventListener('keydown', handleDragShift);
+document.addEventListener('keyup', handleDragShift);
+
+const startDrag = (from, { x, y }) => {
   if (drag.type) return;
   if (Array.isArray(from)) {
     const [row, col] = from;
@@ -396,10 +398,10 @@ const startDrag = (from) => {
   drag.elm.classList.add('block', 'hover');
   setBlockTypeOnElement(drag.elm, drag.type);
   document.querySelector('#drag').replaceChildren(drag.elm);
-  // todo moveDrag() to current position
+  moveDrag({ x, y });
 };
 
-const moveDrag = (x, y) => {
+const moveDrag = ({ x, y }) => {
   const size = drag.elm.clientWidth;
   const elm = document.elementFromPoint(x, y - size / 2);
   if (elm.parentElement.id === 'struct' && elm.classList.contains('block')) {
@@ -421,15 +423,23 @@ const moveDrag = (x, y) => {
     const { x, y } = struct[row][col].elm.getBoundingClientRect();
     drag.elm.style.left = x + 'px';
     drag.elm.style.top = y + 'px';
+    document.body.style.cursor = 'grab';
   } else {
     drag.elm.style.left = x - size / 2 + 'px';
     drag.elm.style.top = y - size + 'px';
+    document.body.style.cursor = 'grabbing';
   }
-  // todo change cursor according to action
 };
 
-const stopDrag = () => {
+const stopDrag = ({ shiftKey }) => {
   if (drag.target) {
+    if (shiftKey) {
+      if (drag.type === 'red_top_input') {
+        drag.type = 'red_top';
+      } else if (drag.type === 'red_top') {
+        drag.type = 'red_top_input';
+      }
+    }
     editStruct('insert_shrink', drag.target, drag.type);
   } else if (drag.origin) {
     editStruct('shrink');
@@ -439,6 +449,7 @@ const stopDrag = () => {
   drag.target = null;
   delete drag.elm;
   document.querySelector('#drag').replaceChildren();
+  document.body.style.cursor = '';
 };
 
 const editStruct = (operation, [row, col] = [0, 0], type = null) => {
@@ -545,11 +556,27 @@ const editStruct = (operation, [row, col] = [0, 0], type = null) => {
   }
 };
 
-const clearStruct = (rows, cols) => {
+document.querySelector('#clear').addEventListener('click', () => {
+  if (clearStruct(2, 1)) renderAfterResize();
+});
+
+const clearStruct = (rows, cols, name = 'nandu') => {
+  if (
+    !fileMeta.saved &&
+    !confirm("You haven't saved the current struct.\nThis will delete it.")
+  ) {
+    return false;
+  }
+
+  fileMeta.saved = true;
+  fileMeta.name = name;
+
   struct.length = rows;
   for (let i = 0; i < rows; i++) {
     struct[i] = new Array(cols).fill(null).map(createBlock);
   }
+
+  return true;
 };
 
 const resizeStruct = (top, bottom, left, right) => {

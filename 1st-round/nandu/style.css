@@ -237,6 +237,7 @@ button {
     background-image: url('assets/torch.svg');
     background-repeat: no-repeat;
     background-size: cover;
+    cursor: pointer;
 
     &.active {
       background-image: url('assets/torch_active.svg');
