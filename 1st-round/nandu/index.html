@@ -18,12 +18,7 @@
           <div class="block blue" id="blueEditor"></div>
           <button class="button" id="clear">Clear</button>
         </div>
-        <div class="storage">
-          <button class="button" onclick="nextElementSibling.click()">
-            Import Struct
-          </button>
-          <input id="importStruct" type="file" accept="text/plain" />
-          <button class="button" id="exportStruct">Export Struct</button>
+        <div class="name">
           <input
             class="text"
             id="name"
@@ -32,6 +27,13 @@
             value="nandu"
             placeholder="name"
           />
+        </div>
+        <div class="storage">
+          <button class="button" onclick="nextElementSibling.click()">
+            Import Struct
+          </button>
+          <input id="importStruct" type="file" accept="text/plain" />
+          <button class="button" id="exportStruct">Export Struct</button>
         </div>
         <div class="generation">
           <button class="button" id="generateTable">Generate Table</button>

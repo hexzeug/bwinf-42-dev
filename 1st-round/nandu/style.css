@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
 :root {
   --block-size: 30px;
   --border-size: 1px;
@@ -10,9 +12,7 @@
 body {
   margin: 0;
 
-  background: #ffd94d;
-
-  font-family: sans-serif;
+  font-family: 'Frutiger LT Pro', 'Frutiger', 'Roboto', sans-serif;
 }
 
 input[type='file'],
@@ -23,6 +23,7 @@ input[type='checkbox'] {
 button,
 input {
   font: inherit;
+  color: inherit;
 }
 
 .screen {
@@ -33,19 +34,39 @@ input {
 }
 
 .nav {
-  --gap: 2rem;
+  padding: 0.5rem 15%;
 
-  padding: calc(var(--gap) / 2) var(--gap);
+  background-color: #ffcc00;
 
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: var(--gap);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+
+  --gap: 0.8rem;
+
+  & > * {
+    padding-inline: var(--gap);
+
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: var(--gap);
+
+    &.editor {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    &:not(:last-child) {
+      border-right: black dashed var(--border-size);
+      margin-right: calc(-1 * var(--border-size));
+    }
+  }
 }
 
 .button {
-  border: solid var(--border-size) black;
+  border: none;
   padding: 0.5em 1em;
 
   background-color: white;
@@ -133,8 +154,6 @@ input {
 
 .canvas {
   height: 100%;
-
-  background: radial-gradient(closest-side, #fffdf6, #ffd94d);
 }
 
 .struct {
