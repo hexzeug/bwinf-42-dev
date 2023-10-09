@@ -358,11 +358,18 @@ document
   .addEventListener('mousedown', (e) => startDrag('blue_top', e));
 
 const handleDragShift = (e) => {
-  if (e.key !== 'Shift') return;
-  if (drag.type === 'red_top_input') {
-    drag.elm.classList.toggle('flipped', e.type === 'keydown');
-  } else if (drag.type === 'red_top') {
-    drag.elm.classList.toggle('flipped', e.type === 'keyup');
+  if (!drag.type) return;
+  if (e.key === 'Escape') {
+    if (e.type === 'keyup') {
+      drag.target = null;
+      stopDrag({ shiftKey: false });
+    }
+  } else if (e.key === 'Shift') {
+    if (drag.type === 'red_top_input') {
+      drag.elm.classList.toggle('flipped', e.type === 'keydown');
+    } else if (drag.type === 'red_top') {
+      drag.elm.classList.toggle('flipped', e.type === 'keyup');
+    }
   }
 };
 document.addEventListener('keydown', handleDragShift);
@@ -385,6 +392,7 @@ const startDrag = (from, { x, y }) => {
   drag.elm.classList.add('block', 'hover');
   setBlockTypeOnElement(drag.elm, drag.type);
   document.querySelector('#drag').replaceChildren(drag.elm);
+  document.querySelector('#struct').classList.add('grid');
   moveDrag({ x, y });
 };
 
@@ -404,7 +412,7 @@ const moveDrag = ({ x, y }) => {
     } else {
       drag.target = null;
     }
-  } else {
+  } else if (elm.id === 'struct' || elm.parentElement.id === 'struct') {
     let min = Infinity;
     let blockPos;
     struct
@@ -431,6 +439,8 @@ const moveDrag = ({ x, y }) => {
         }
       });
     drag.target = min < MAX_DIST ** 2 ? blockPos : null;
+  } else {
+    drag.target = null;
   }
   if (drag.target) {
     const [row, col] = drag.target;
@@ -463,6 +473,7 @@ const stopDrag = ({ shiftKey }) => {
   drag.target = null;
   delete drag.elm;
   document.querySelector('#drag').replaceChildren();
+  document.querySelector('#struct').classList.remove('grid');
   document.body.style.cursor = '';
 };
 

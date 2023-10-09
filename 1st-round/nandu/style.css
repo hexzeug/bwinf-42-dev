@@ -158,6 +158,12 @@ button {
     pointer-events: none;
 
     transition: top 10ms ease-out, left 10ms ease-out;
+
+    box-shadow: black 0 0 20px -5px;
+  }
+
+  &:not(.white, .red, .blue):is(.struct.grid *) {
+    border-color: #d1d1d1;
   }
 
   &.white {
