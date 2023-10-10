@@ -309,17 +309,20 @@ const handleStructInteraction = async (e) => {
       break;
     case 'mousedown':
       if (block.type !== 'empty') {
-        await sleep(200, (cancel) => (block.mousedown = cancel));
-        delete block.mousedown;
+        await sleep(200, (cancel) => (drag.mousedown = cancel));
+        delete drag.mousedown;
 
         startDrag([row, col], e);
       }
       break;
+    case 'mouseout':
+      if (drag.mousedown) {
+        startDrag([row, col], e);
+      }
     case 'mouseup':
-      //todo doesnt register mouseup outside of block, resulting in drag start with mouse released
-      if (block.mousedown) {
-        block.mousedown();
-        delete block.mousedown;
+      if (drag.mousedown) {
+        drag.mousedown();
+        delete drag.mousedown;
       }
       break;
   }
@@ -333,6 +336,9 @@ document
 document
   .querySelector('#struct')
   .addEventListener('mouseup', handleStructInteraction);
+document
+  .querySelector('#struct')
+  .addEventListener('mouseout', handleStructInteraction);
 
 const handleDragInteraction = (e) => {
   if (!drag.type) return;
