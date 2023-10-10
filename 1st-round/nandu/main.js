@@ -53,12 +53,20 @@ const importStruct = async (file) => {
   if (!w || !h) throw new Error('incorrect format: bad meta line');
   if (lines.length < h) throw new Error('incorrect format: bad height');
 
-  const tokens = lines.slice(0, h).map((line) => {
+  const tokens = lines.slice(0, h).map((line, lineIdx) => {
     const cells = line.split(/ +/).slice(0, w);
     if (cells.length < w) throw new Error('incorrect format: bad width');
     return cells.map((cell) => {
-      if (cell.startsWith('Q')) return 'Q';
-      if (cell.startsWith('L')) return 'L';
+      if (cell.startsWith('Q')) {
+        if (lineIdx !== 0)
+          throw new Error('incorrect format: bad input position');
+        return 'Q';
+      }
+      if (cell.startsWith('L')) {
+        if (lineIdx !== h - 1)
+          throw new Error('incorrect format: bad output position');
+        return 'L';
+      }
       if (['X', 'R', 'r', 'B', 'W'].includes(cell)) return cell;
       throw new Error('incorrect format: bad token', cell);
     });
@@ -76,10 +84,10 @@ const importStruct = async (file) => {
       const row = j + 2;
       switch (cell) {
         case 'Q':
-          struct[row][col].input = true;
+          struct.inputs[row] = true;
           break;
         case 'L':
-          struct[row][col].output = true;
+          struct.outputs[row] = true;
           break;
         case 'W':
           struct[row][col].type = 'white_top';
@@ -127,10 +135,11 @@ const exportStruct = () => {
       if (row < 2 || row >= struct.length - 2) return;
       switch (struct[row][col].type) {
         case 'empty':
-          if (struct[row][col].input) text += ('Q' + ++inCount).padEnd(3);
-          else if (struct[row][col].output)
+          if (col === 0 && struct.inputs[row]) {
+            text += ('Q' + ++inCount).padEnd(3);
+          } else if (col === struct[0].length - 1 && struct.outputs[row]) {
             text += ('L' + ++outCount).padEnd(3);
-          else text += 'X  ';
+          } else text += 'X  ';
           break;
         case 'white_top':
         case 'white_bot':
@@ -517,10 +526,6 @@ const editStruct = (operation, [row, col] = [0, 0], type = null) => {
       break;
     case 'insert':
     case 'insert_shrink':
-      delete block.input;
-      delete block.output;
-      delete blockBot.input;
-      delete blockBot.output;
       block.type = type;
       switch (type) {
         case 'white_top':
@@ -609,6 +614,9 @@ const clearStruct = (rows, cols, name = 'nandu') => {
     struct[i] = new Array(cols).fill(null).map(createBlock);
   }
 
+  struct.inputs = new Array(rows).fill(false);
+  struct.outputs = new Array(rows).fill(false);
+
   return true;
 };
 
@@ -633,12 +641,24 @@ const resizeStruct = (top, bottom, left, right) => {
       .fill(null)
       .map(() => new Array(cols).fill(null).map(createBlock))
   );
+  struct.inputs.splice(0, -top, ...new Array(Math.max(0, top)).fill(false));
+  struct.outputs.splice(0, -top, ...new Array(Math.max(0, top)).fill(false));
   struct.splice(
     struct.length + bottom,
     Infinity,
     ...new Array(Math.max(0, bottom))
       .fill(null)
       .map(() => new Array(cols).fill(null).map(createBlock))
+  );
+  struct.inputs.splice(
+    struct.length + bottom,
+    Infinity,
+    ...new Array(Math.max(0, bottom)).fill(false)
+  );
+  struct.outputs.splice(
+    struct.length + bottom,
+    Infinity,
+    ...new Array(Math.max(0, bottom)).fill(false)
   );
 };
 
@@ -713,20 +733,18 @@ const generateTable = async () => {
 };
 
 const inputIterator = function* () {
-  const inputs = [];
-  const outputs = [];
-  struct.forEach((x, row) =>
-    x.forEach((block, col) => {
-      if (block.input) inputs.push([row, col]);
-      if (block.output) outputs.push([row, col]);
-    })
-  );
+  const inputs = struct.inputs
+    .map((x, row) => (x ? row : null))
+    .filter(Boolean);
+  const outputs = struct.outputs
+    .map((x, row) => (x ? row : null))
+    .filter(Boolean);
   for (const i of binaryIterator(inputs.length)) {
-    const [row, col] = inputs[i];
-    struct[row][col].out = !struct[row][col].out;
-    fastUpdate([row, col]);
-    const ins = inputs.map(([row, col]) => struct[row][col].out);
-    const outs = outputs.map(([row, col]) => struct[row][col - 1].out);
+    const row = inputs[i];
+    struct[row][0].out = !struct[row][0].out;
+    fastUpdate([row, 0]);
+    const ins = inputs.map((row) => struct[row][0].out);
+    const outs = outputs.map((row) => struct[row][struct[0].length - 2].out);
     const idx = ins.reduce((p, c, i) => p | (c << (ins.length - 1 - i)), 0);
     yield [idx, ins, outs];
   }
