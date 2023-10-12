@@ -16,7 +16,7 @@
           <div class="block white" id="whiteEditor"></div>
           <div class="block red" id="redEditor"></div>
           <div class="block blue" id="blueEditor"></div>
-          <button class="button" id="clear">Clear</button>
+          <button class="button editorButton" id="clear">Clear</button>
         </div>
         <div class="name">
           <input
@@ -29,14 +29,23 @@
           />
         </div>
         <div class="storage">
-          <button class="button" onclick="nextElementSibling.click()">
+          <button
+            class="button editorButton"
+            onclick="nextElementSibling.click()"
+          >
             Import Struct
           </button>
           <input id="importStruct" type="file" accept="text/plain" />
           <button class="button" id="exportStruct">Export Struct</button>
         </div>
         <div class="generation">
-          <button class="button" id="generateTable">Generate Table</button>
+          <button class="button selectIO" id="selectIO">
+            <span>Select inputs and outputs</span>
+            <span>Done</span>
+          </button>
+          <button class="button editorButton" id="generateTable">
+            Generate Table
+          </button>
           <input id="animateTable" type="checkbox" />
           <label class="checkbox" for="animateTable">
             <span></span>

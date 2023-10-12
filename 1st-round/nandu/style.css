@@ -76,13 +76,20 @@ input {
 
   outline: initial;
 
-  &:hover,
-  &:focus {
-    background-color: #f3f3f3;
+  &:not(:disabled) {
+    &:hover,
+    &:focus {
+      background-color: #f3f3f3;
+    }
+
+    &:active {
+      background-color: #e0e0e0;
+    }
   }
 
-  &:active {
-    background-color: #e0e0e0;
+  &:disabled {
+    color: #d1d1d1;
+    cursor: not-allowed;
   }
 }
 
@@ -150,6 +157,11 @@ input {
   > :not(:first-child) {
     font-weight: bold;
   }
+}
+
+.selectIO.active :first-child,
+.selectIO:not(.active) :last-child {
+  display: none;
 }
 
 .canvas {
@@ -282,5 +294,15 @@ input {
     &.active {
       background-image: url('assets/torch_active.svg');
     }
+  }
+
+  &.input,
+  &.output {
+    border-color: #e63911;
+    border-style: dashed;
+
+    background-color: #e638113b;
+
+    cursor: default;
   }
 }

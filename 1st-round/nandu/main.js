@@ -5,8 +5,9 @@ const fileMeta = {
   saved: true,
   name: null,
 };
-const tableAnimation = {
-  running: false,
+const editor = {
+  blocked: false,
+  ioSelection: false,
 };
 const drag = {
   type: null,
@@ -46,6 +47,8 @@ document.addEventListener(
 );
 
 const importStruct = async (file) => {
+  if (editor.blocked) return;
+
   console.log('importing struct from', file);
   const content = await file.text();
   const [meta, ...lines] = content.split(/\r?\n/);
@@ -176,8 +179,6 @@ const slowUpdate = () => {
 };
 
 const fastUpdate = (...changes) => {
-  const updatable = ([row, col]) =>
-    !['empty', 'red_top', 'red_bot'].includes(struct[row][col].type);
   for (let [row, col] of changes) {
     let out;
     switch (struct[row][col].type) {
@@ -188,8 +189,8 @@ const fastUpdate = (...changes) => {
         if (struct[row][col].out === out) break;
         struct[row][col].out = out;
         struct[row + 1][col].out = out;
-        if (updatable([row, col + 1])) changes.push([row, col + 1]);
-        if (updatable([row + 1, col + 1])) changes.push([row + 1, col + 1]);
+        if (hasSensor([row, col + 1])) changes.push([row, col + 1]);
+        if (hasSensor([row + 1, col + 1])) changes.push([row + 1, col + 1]);
         break;
       case 'red_bot_input':
         row--;
@@ -197,14 +198,14 @@ const fastUpdate = (...changes) => {
         out = calcBlockOut([row, col]);
         struct[row][col].out = out;
         struct[row + 1][col].out = out;
-        if (updatable([row, col + 1])) changes.push([row, col + 1]);
-        if (updatable([row + 1, col + 1])) changes.push([row + 1, col + 1]);
+        if (hasSensor([row, col + 1])) changes.push([row, col + 1]);
+        if (hasSensor([row + 1, col + 1])) changes.push([row + 1, col + 1]);
         break;
       case 'blue_top':
       case 'blue_bot':
         struct[row][col].out = calcBlockOut([row, col]);
       case 'empty':
-        if (updatable([row, col + 1])) changes.push([row, col + 1]);
+        if (hasSensor([row, col + 1])) changes.push([row, col + 1]);
         break;
     }
   }
@@ -265,6 +266,13 @@ const updateElement = ([row, col]) => {
         elm.classList.add('torch');
         if (struct[row][col].out) elm.classList.add('active');
       }
+      if (editor.ioSelection) {
+        if (col === struct[0].length - 1 && struct.outputs[row]) {
+          elm.classList.add('output');
+        } else if (col === 0 && struct.inputs[row]) {
+          elm.classList.add('input');
+        }
+      }
       break;
     case 'white_top':
     case 'red_top':
@@ -302,11 +310,11 @@ const setBlockTypeOnElement = (elm, type) => {
 // Edit
 
 const handleStructInteraction = async (e) => {
-  if (tableAnimation.running) return;
   const elm = e.target;
   if (!elm.classList.contains('block')) return;
   const [row, col] = getBlockPosOfElm(elm);
   const block = struct[row][col];
+
   switch (e.type) {
     case 'click':
       if (isTorch([row, col])) {
@@ -314,6 +322,9 @@ const handleStructInteraction = async (e) => {
       }
       if (e.shiftKey && ['red_top', 'red_top_input'].includes(block.type)) {
         editStruct('flip', [row, col]);
+      }
+      if (editor.ioSelection) {
+        editStruct('toggleIO', [row, col]);
       }
       break;
     case 'mousedown':
@@ -375,25 +386,31 @@ document
   .querySelector('#blueEditor')
   .addEventListener('mousedown', (e) => startDrag('blue_top', e));
 
-const handleDragShift = (e) => {
-  if (!drag.type) return;
-  if (e.key === 'Escape') {
-    if (e.type === 'keyup') {
-      drag.target = null;
-      stopDrag({ shiftKey: false });
-    }
-  } else if (e.key === 'Shift') {
-    if (drag.type === 'red_top_input') {
-      drag.elm.classList.toggle('flipped', e.type === 'keydown');
-    } else if (drag.type === 'red_top') {
-      drag.elm.classList.toggle('flipped', e.type === 'keyup');
-    }
+const handleKeybord = (e) => {
+  switch (e.key) {
+    case 'Escape':
+      if (e.type === 'keyup') {
+        if (editor.ioSelection) toggleIOSelection();
+        if (drag.type) {
+          drag.target = null;
+          stopDrag({ shiftKey: false });
+        }
+      }
+      break;
+    case 'Shift':
+      if (drag.type === 'red_top_input') {
+        drag.elm.classList.toggle('flipped', e.type === 'keydown');
+      } else if (drag.type === 'red_top') {
+        drag.elm.classList.toggle('flipped', e.type === 'keyup');
+      }
+      break;
   }
 };
-document.addEventListener('keydown', handleDragShift);
-document.addEventListener('keyup', handleDragShift);
+document.addEventListener('keydown', handleKeybord);
+document.addEventListener('keyup', handleKeybord);
 
 const startDrag = (from, { x, y }) => {
+  if (editor.blocked) return;
   if (drag.type) return;
   if (Array.isArray(from)) {
     const [row, col] = from;
@@ -496,6 +513,21 @@ const stopDrag = ({ shiftKey }) => {
 };
 
 const editStruct = (operation, [row, col] = [0, 0], type = null) => {
+  if (operation === 'toggleIO') {
+    if (col === struct[0].length - 1) {
+      struct.outputs[row] = !struct.outputs[row];
+    } else if (col === 0) {
+      struct.inputs[row] = !struct.inputs[row];
+    } else {
+      return;
+    }
+    fileMetaEdit();
+    render();
+    return;
+  }
+
+  if (editor.blocked) return;
+
   const block = struct[row][col];
   const blockBot = struct[row + 1][col];
   let resized = false;
@@ -664,6 +696,14 @@ const resizeStruct = (top, bottom, left, right) => {
 
 // Edit utils
 
+const blockEditor = (block) => {
+  if (block === editor.blocked) return;
+  editor.blocked = block;
+  document
+    .querySelectorAll('.editorButton')
+    .forEach((elm) => (elm.disabled = block));
+};
+
 const getBlockPosOfElm = (elm) => {
   let pos = 0;
   let pointer = elm;
@@ -673,11 +713,13 @@ const getBlockPosOfElm = (elm) => {
   return [row, col];
 };
 
+const hasSensor = ([row, col]) =>
+  !['empty', 'red_top', 'red_bot'].includes(struct[row][col].type);
+
 const isTorch = ([row, col]) =>
   col === 0 &&
-  struct[row][0].type === 'empty' &&
   struct[0].length > 1 &&
-  struct[row][1].type !== 'empty';
+  (struct.inputs[row] || hasSensor([row, 1]));
 
 const createBlock = () => ({ type: 'empty', out: false });
 
@@ -695,13 +737,13 @@ const generateTable = async () => {
   const NL = '\n';
   const FPS = 8;
 
-  if (tableAnimation.running) return;
+  if (editor.blocked) return;
   const animate = document.querySelector('#animateTable').checked;
 
   const lines = [];
   let inWidth, outWidth;
   let inSize, outSize;
-  if (animate) tableAnimation.running = true;
+  if (animate) blockEditor(true);
   for (const [i, inputs, outputs] of inputIterator()) {
     if (!inSize) inSize = inputs.length;
     if (!outSize) outSize = outputs.length;
@@ -719,7 +761,7 @@ const generateTable = async () => {
       await sleep(1000 / FPS);
     }
   }
-  if (animate) tableAnimation.running = false;
+  if (animate) blockEditor(false);
   const inHeader = new Array(inSize)
     .fill(null)
     .map((_, i) => ('Q' + (i + 1)).padEnd(inWidth))
@@ -757,6 +799,26 @@ const binaryIterator = function* (exponent, reversed = false, top = true) {
   yield* binaryIterator(exponent - 1, !reversed, false);
   if (top) yield exponent - 1;
 };
+
+// Select IO
+
+const toggleIOSelection = () => {
+  if (editor.ioSelection) {
+    blockEditor(false);
+    editor.ioSelection = false;
+  } else {
+    if (editor.blocked) return;
+    blockEditor(true);
+    editor.ioSelection = true;
+  }
+  document
+    .querySelector('#selectIO')
+    .classList.toggle('active', editor.ioSelection);
+  render();
+};
+document
+  .querySelector('#selectIO')
+  .addEventListener('click', toggleIOSelection);
 
 // Handle files
 
