@@ -398,10 +398,11 @@ const handleKeybord = (e) => {
       }
       break;
     case 'Shift':
+      const hoverElm = document.querySelector('#draghover');
       if (drag.type === 'red_top_input') {
-        drag.elm.classList.toggle('flipped', e.type === 'keydown');
+        hoverElm.classList.toggle('flipped', e.type === 'keydown');
       } else if (drag.type === 'red_top') {
-        drag.elm.classList.toggle('flipped', e.type === 'keyup');
+        hoverElm.classList.toggle('flipped', e.type === 'keyup');
       }
       break;
   }
@@ -423,16 +424,16 @@ const startDrag = (from, { x, y }) => {
     drag.origin = null;
     drag.target = null;
   }
-  drag.elm = document.createElement('div');
-  drag.elm.classList.add('block', 'hover');
-  setBlockTypeOnElement(drag.elm, drag.type);
-  document.querySelector('#drag').replaceChildren(drag.elm);
+  const elm = document.querySelector('#draghover');
+  elm.classList.add('block', 'hover');
+  setBlockTypeOnElement(elm, drag.type);
   document.querySelector('#struct').classList.add('grid');
   moveDrag({ x, y });
 };
 
 const moveDrag = ({ x, y }) => {
-  const SIZE = drag.elm.clientWidth;
+  const hoverElm = document.querySelector('#draghover');
+  const SIZE = hoverElm.clientWidth;
   const MAX_DIST = 10 * SIZE;
 
   const elm = document.elementFromPoint(x, y - SIZE / 2);
@@ -480,12 +481,12 @@ const moveDrag = ({ x, y }) => {
   if (drag.target) {
     const [row, col] = drag.target;
     const { x, y } = struct[row][col].elm.getBoundingClientRect();
-    drag.elm.style.left = x + 'px';
-    drag.elm.style.top = y + 'px';
+    hoverElm.style.left = x + 'px';
+    hoverElm.style.top = y + 'px';
     document.body.style.cursor = 'grab';
   } else {
-    drag.elm.style.left = x - SIZE / 2 + 'px';
-    drag.elm.style.top = y - SIZE + 'px';
+    hoverElm.style.left = x - SIZE / 2 + 'px';
+    hoverElm.style.top = y - SIZE + 'px';
     document.body.style.cursor = 'grabbing';
   }
 };
@@ -506,8 +507,7 @@ const stopDrag = ({ shiftKey }) => {
   drag.type = null;
   drag.origin = null;
   drag.target = null;
-  delete drag.elm;
-  document.querySelector('#drag').replaceChildren();
+  document.querySelector('#draghover').className = '';
   document.querySelector('#struct').classList.remove('grid');
   document.body.style.cursor = '';
 };
@@ -742,7 +742,7 @@ const generateTable = async () => {
   if (editor.blocked) return;
 
   if (!struct.inputs.includes(true) || !struct.outputs.includes(true)) {
-    alert("You have to select at least one input and one output.");
+    alert('You have to select at least one input and one output.');
     return;
   }
 

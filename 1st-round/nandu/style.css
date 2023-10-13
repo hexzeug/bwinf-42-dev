@@ -182,6 +182,20 @@ input {
   align-content: center;
 }
 
+.draginfo {
+  display: none;
+
+  position: absolute;
+  bottom: -2em;
+  left: 50%;
+  translate: -50% 0;
+
+  width: max-content;
+
+  font-size: 0.8rem;
+  font-weight: 200;
+}
+
 .block {
   box-sizing: content-box;
   width: var(--block-size);
@@ -206,6 +220,10 @@ input {
     transition: top 10ms ease-out, left 10ms ease-out;
 
     box-shadow: black 0 0 20px -5px;
+
+    &.red .draginfo {
+      display: initial;
+    }
   }
 
   &:not(.white, .red, .blue):is(.struct.grid *) {
