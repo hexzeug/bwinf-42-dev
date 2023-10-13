@@ -632,6 +632,8 @@ document.querySelector('#clear').addEventListener('click', () => {
 });
 
 const clearStruct = (rows, cols, name = 'nandu') => {
+  if (editor.blocked) return;
+
   if (
     !fileMeta.saved &&
     !confirm("You haven't saved the current struct.\nThis will delete it.")
@@ -738,6 +740,12 @@ const generateTable = async () => {
   const FPS = 8;
 
   if (editor.blocked) return;
+
+  if (!struct.inputs.includes(true) || !struct.outputs.includes(true)) {
+    alert("You have to select at least one input and one output.");
+    return;
+  }
+
   const animate = document.querySelector('#animateTable').checked;
 
   const lines = [];
