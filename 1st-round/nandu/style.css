@@ -15,8 +15,7 @@ body {
   font-family: 'Frutiger LT Pro', 'Frutiger', 'Roboto', sans-serif;
 }
 
-input[type='file'],
-input[type='checkbox'] {
+input[type='file'] {
   display: none;
 }
 
@@ -108,35 +107,55 @@ input {
 }
 
 .checkbox {
+  padding: 0.5em 1em;
+
+  position: relative;
+
   user-select: none;
   cursor: pointer;
-  --height: 1.5em;
-  --width: 2.7em;
 
-  > :first-child {
-    box-sizing: content-box;
-    height: var(--height);
-    width: var(--width);
-    display: inline-block;
+  font-weight: bold;
 
-    position: relative;
+  &:hover {
+    background-color: #00000015;
+  }
 
-    border: solid black var(--border-size);
-    border-radius: 1000px;
+  [type='checkbox'] {
+    opacity: 0;
+    width: 1.8em;
+  }
 
-    background-color: white;
+  label {
+    cursor: pointer;
 
     &::before {
       content: '';
+
       display: inline-block;
-      width: calc(var(--height) / 3 * 2);
-      height: calc(var(--height) / 3 * 2);
+      height: 1.8em;
+      width: 3em;
+
+      position: absolute;
+      left: 0;
+      top: 50%;
+      translate: 0 -50%;
+
+      border-radius: 1000px;
+
+      background-color: white;
+    }
+
+    &::after {
+      content: '';
+
+      display: inline-block;
+      height: 1.4em;
+      aspect-ratio: 1;
 
       position: absolute;
       top: 50%;
       left: 0;
-      translate: calc(var(--height) / 2) 0;
-      transform: translate(-50%, -50%);
+      translate: 0.2em -50%;
 
       border-radius: 1000px;
 
@@ -144,18 +163,14 @@ input {
 
       transition: translate 100ms ease-out;
     }
-
-    &:is(:checked + * > *) {
-      background-color: #e0e0e0;
-
-      &::before {
-        translate: calc(var(--width) - var(--height) / 2) 0;
-      }
-    }
   }
 
-  > :not(:first-child) {
-    font-weight: bold;
+  :checked + label::after {
+    translate: 1.4em -50%;
+  }
+
+  &:focus-within label::before {
+    background-color: #f3f3f3;
   }
 }
 

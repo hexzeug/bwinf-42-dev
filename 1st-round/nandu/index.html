@@ -18,7 +18,7 @@
           <div class="block blue" id="blueEditor"></div>
           <button class="button editorButton" id="clear">Clear</button>
         </div>
-        <div class="name">
+        <div class="file">
           <input
             class="text"
             id="name"
@@ -27,8 +27,6 @@
             value="nandu"
             placeholder="name"
           />
-        </div>
-        <div class="storage">
           <button
             class="button editorButton"
             onclick="nextElementSibling.click()"
@@ -46,11 +44,10 @@
           <button class="button editorButton" id="generateTable">
             Generate Table
           </button>
-          <input id="animateTable" type="checkbox" />
-          <label class="checkbox" for="animateTable">
-            <span></span>
-            <span>Animate Table Generation</span>
-          </label>
+          <div class="checkbox">
+            <input id="animateTable" type="checkbox" />
+            <label for="animateTable"> Animate Table Generation </label>
+          </div>
         </div>
       </div>
       <div class="canvas">
