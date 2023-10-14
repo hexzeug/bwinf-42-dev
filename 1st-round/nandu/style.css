@@ -38,28 +38,64 @@ input {
   background-color: #ffcc00;
 
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-template-columns: repeat(4, 1fr);
 
   --gap: 0.8rem;
 
   & > * {
     padding-inline: var(--gap);
 
-    display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    justify-content: center;
+    display: grid;
+    align-content: center;
     gap: var(--gap);
 
-    &.editor {
-      flex-direction: row;
-      align-items: center;
-    }
+    position: relative;
 
     &:not(:last-child) {
       border-right: black dashed var(--border-size);
       margin-right: calc(-1 * var(--border-size));
+    }
+
+    &::before {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      translate: -50% 0;
+
+      font-size: 1rem;
+      font-weight: 800;
+      color: #00000060;
+    }
+  }
+
+  .editor {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, min-content);
+
+    &::before {
+      content: 'Editor';
+    }
+  }
+
+  .file {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, min-content);
+
+    > input {
+      grid-column: span 2;
+    }
+
+    &::before {
+      content: 'File';
+    }
+  }
+
+  .generator {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, min-content);
+
+    &::before {
+      content: 'Generator';
     }
   }
 }
@@ -72,6 +108,7 @@ input {
 
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
 
   outline: initial;
 
@@ -111,8 +148,13 @@ input {
 
   position: relative;
 
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
   user-select: none;
   cursor: pointer;
+  white-space: nowrap;
 
   font-weight: bold;
 
