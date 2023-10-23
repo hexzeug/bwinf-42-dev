@@ -196,6 +196,8 @@ input {
       border-radius: 1000px;
 
       background-color: white;
+
+      transition: background-color 100ms ease;
     }
 
     &::after {
@@ -214,16 +216,17 @@ input {
 
       background-color: black;
 
-      transition: translate 100ms ease-out;
+      transition: translate 100ms ease-out, background-color 100ms ease;
     }
+  }
+
+  :checked + label::before {
+    background-color: black;
   }
 
   :checked + label::after {
     translate: 1.4em -50%;
-  }
-
-  &:focus-within label::before {
-    background-color: #f3f3f3;
+    background-color: white;
   }
 }
 
@@ -384,10 +387,10 @@ input {
 
   &.input,
   &.output {
-    border-color: #e63911;
+    border-color: #ffcc00;
     border-style: dashed;
 
-    background-color: #e638113b;
+    background-color: #ffcc0041;
 
     cursor: default;
   }
