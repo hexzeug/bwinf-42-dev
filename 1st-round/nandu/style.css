@@ -13,6 +13,8 @@ body {
   margin: 0;
 
   font-family: 'Frutiger LT Pro', 'Frutiger', 'Roboto', sans-serif;
+
+  overflow-x: hidden;
 }
 
 input[type='file'] {
@@ -33,70 +35,81 @@ input {
 }
 
 .nav {
-  padding: 0.5rem 15%;
+  padding: 0.5rem 10%;
 
   background-color: #ffcc00;
 
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 3fr repeat(4, min-content) repeat(2, 2fr) repeat(
+      2,
+      2fr
+    );
+  grid-template-rows: min-content repeat(2, 1fr);
 
   --gap: 0.8rem;
+  row-gap: var(--gap);
 
   & > * {
     padding-inline: var(--gap);
 
     display: grid;
-    align-content: center;
-    gap: var(--gap);
+    grid-template: subgrid / subgrid;
+    column-gap: var(--gap);
 
-    position: relative;
+    grid-row: 1 / -1;
 
     &:not(:last-child) {
       border-right: black dashed var(--border-size);
       margin-right: calc(-1 * var(--border-size));
     }
 
-    &::before {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      translate: -50% 0;
+    &:nth-child(1) {
+      grid-column: span 1;
+      align-items: center;
 
-      font-size: 1rem;
-      font-weight: 800;
-      color: #00000060;
+      :first-child {
+        grid-row: 1 / -1;
+      }
     }
-  }
 
-  .editor {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(2, min-content);
+    &:nth-child(2) {
+      grid-column: span 4;
+      align-items: center;
 
-    &::before {
-      content: 'Editor';
+      :not(:first-child) {
+        grid-row: 2 / -1;
+      }
     }
-  }
 
-  .file {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, min-content);
-
-    > input {
+    &:nth-child(3) {
       grid-column: span 2;
+
+      :nth-child(2) {
+        grid-column: span 2;
+      }
     }
 
-    &::before {
-      content: 'File';
+    &:nth-child(4) {
+      grid-column: span 2;
+
+      :last-child {
+        grid-column: span 2;
+      }
     }
   }
 
-  .generator {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, min-content);
+  h1,
+  h2 {
+    margin: 0;
+    text-align: center;
+    vertical-align: middle;
+  }
 
-    &::before {
-      content: 'Generator';
-    }
+  h2 {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 600;
+    opacity: 0.4;
   }
 }
 
