@@ -45,16 +45,14 @@ int main() {
             oldPos = pos;
         }
 
-        for (int i = 0; i < N; i++) {
+        for (int i = 0; i <= essPath.front(); i++) {
             string name = origTour[i].name;
 
             int v = nameMap[name];
             
-            if (nameMap[name] != i && nameMap[name] >= essPath.back())
-                origTour[nameMap[name]].skipTo = i;
+            if (v != i && v >= essPath.back())
+                origTour[v].skipTo = i;
             nameMap[name] = i;
-
-            if (origTour[i].essential) break;
         }
     }
 
