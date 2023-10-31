@@ -1,3 +1,6 @@
+# This short script is used to create the standalone minified html file.
+# It is not part of the solution to BWINF.
+
 from base64 import b64encode
 from minify_html import minify
 
