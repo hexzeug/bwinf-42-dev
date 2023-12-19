@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nandu - 42th German Federal Competition in Computer Science</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="screen">
+      <div class="nav">
+        <div class="title">
+          <h1>Nandu</h1>
+        </div>
+        <div class="editor">
+          <h2>Editor</h2>
+          <div class="block white" id="whiteEditor"></div>
+          <div class="block red" id="redEditor"></div>
+          <div class="block blue" id="blueEditor"></div>
+          <button class="button editorButton" id="clear">Clear</button>
+        </div>
+        <div class="file">
+          <h2>File</h2>
+          <input
+            class="text"
+            id="name"
+            type="text"
+            size="10"
+            value="nandu"
+            placeholder="name"
+          />
+          <button
+            class="button editorButton"
+            onclick="nextElementSibling.click()"
+          >
+            Import Struct
+          </button>
+          <input id="importStruct" type="file" accept="text/plain" />
+          <button class="button" id="exportStruct">Export Struct</button>
+        </div>
+        <div class="analyzer">
+          <h2>Analyzer</h2>
+          <button class="button selectIO" id="selectIO">
+            <span>Select Inputs and Outputs</span>
+            <span>Done</span>
+          </button>
+          <button class="button editorButton" id="generateTable">
+            Analyze
+          </button>
+          <div class="checkbox">
+            <input id="animateTable" type="checkbox" />
+            <label for="animateTable">Animate</label>
+          </div>
+        </div>
+      </div>
+      <div class="canvas">
+        <div class="input"></div>
+        <div class="struct" id="struct"></div>
+        <div class="output"></div>
+      </div>
+      <div id="drag">
+        <div id="draghover">
+          <div id="draginfo" class="draginfo">
+            Press <kbd>Shift</kbd> to flip
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+  <script src="main.js"></script>
+</html>
